@@ -1378,7 +1378,13 @@
     });
 
     // File Upload & Drag-Drop Handling
-    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("click", (e) => {
+      // If clicking inside preview or on any button, do not trigger file picker
+      if (e.target.closest("button") || e.target.closest("#dropzonePreview")) {
+        return;
+      }
+      fileInput.click();
+    });
 
     dropzone.addEventListener("dragover", (e) => {
       e.preventDefault();
@@ -1509,7 +1515,12 @@
       appendLog("[RESET] System state and comparator displays cleared to initial ready state.");
     }
 
-    if (btnClearImage) btnClearImage.addEventListener("click", resetAllUI);
+    if (btnClearImage) {
+      btnClearImage.addEventListener("click", (e) => {
+        e.stopPropagation();
+        resetAllUI();
+      });
+    }
 
     // =========================================================================
     // CROPPER MODAL CONTROLS & LOGIC
@@ -1543,7 +1554,8 @@
     }
 
     if (btnOpenCropModal) {
-      btnOpenCropModal.addEventListener("click", () => {
+      btnOpenCropModal.addEventListener("click", (e) => {
+        e.stopPropagation();
         if (!originalImageDataUrl && !imgPreview.src) {
           appendLog("[CROP] Please upload an image first to crop.", "text-signalYellow");
           return;
@@ -1624,7 +1636,8 @@
     }
 
     if (btnRevertCrop) {
-      btnRevertCrop.addEventListener("click", () => {
+      btnRevertCrop.addEventListener("click", (e) => {
+        e.stopPropagation();
         if (!originalImageFile || !originalImageDataUrl) return;
         selectedImageFile = originalImageFile;
         imgPreview.src = originalImageDataUrl;
