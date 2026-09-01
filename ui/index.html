@@ -426,14 +426,20 @@
 
           <!-- CARD 2: BLOCKCHAIN PROOF (Span 5) -->
           <div class="lg:col-span-5 rounded-md border border-border bg-surface flex flex-col overflow-hidden">
-            <div class="px-4 py-3 border-b border-border bg-surfaceElevated flex justify-between items-center">
+            <div class="px-4 py-3 border-b border-border bg-surfaceElevated flex justify-between items-center gap-2">
               <div class="flex items-center gap-2">
                 <svg class="w-4 h-4 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
                 <h2 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">BLOCKCHAIN PROOF</h2>
               </div>
-              <span id="proofStatusBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-textMuted">UNANCHORED</span>
+              <div class="flex items-center gap-2">
+                <button id="btnHeaderCandidates" class="px-2 py-1 rounded bg-bg border border-border hover:border-signalGreen text-[11px] font-mono text-textPrimary hover:text-signalGreen flex items-center gap-1.5 transition-colors cursor-pointer" title="Click to view all evaluated candidate photos and distance scores">
+                  <svg class="w-3.5 h-3.5 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                  <span id="btnHeaderCandidatesText">Evaluated Candidates (0)</span>
+                </button>
+                <span id="proofStatusBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-textMuted">UNANCHORED</span>
+              </div>
             </div>
 
             <div class="p-5 flex-1 flex flex-col justify-between gap-4">
@@ -473,10 +479,17 @@
 
               <!-- ACTION ROW: VERIFY & TAMPER BUTTONS -->
               <div class="flex flex-col gap-2 pt-2 border-t border-border">
-                <button id="btnViewResultsModal" disabled class="w-full py-2.5 px-3 rounded border border-signalGreen/40 bg-surfaceElevated hover:bg-signalGreen hover:text-bg text-signalGreen text-xs font-mono font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-2">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                  <span>View Proof Record (JSON)</span>
-                </button>
+                <div class="grid grid-cols-2 gap-2">
+                  <button id="btnViewCandidatesModal" class="py-2.5 px-3 rounded border border-border bg-surfaceElevated hover:border-signalGreen text-textPrimary hover:text-signalGreen text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                    <span id="btnViewCandidatesText">Evaluated Candidates (0)</span>
+                  </button>
+
+                  <button id="btnViewResultsModal" disabled class="py-2.5 px-3 rounded border border-signalGreen/40 bg-surfaceElevated hover:bg-signalGreen hover:text-bg text-signalGreen text-xs font-mono font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <span>Proof JSON</span>
+                  </button>
+                </div>
 
                 <div class="grid grid-cols-2 gap-2">
                   <button id="btnVerify" disabled class="py-2 px-3 rounded border border-signalGreen/40 bg-surfaceElevated hover:bg-signalGreen hover:text-bg text-signalGreen text-xs font-mono font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1.5">
@@ -593,6 +606,37 @@
     </div>
   </div>
 
+  <!-- EVALUATED CANDIDATES MODAL -->
+  <div id="modalCandidates" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface border border-border rounded-lg max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-border bg-surfaceElevated flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+          <h3 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">ALL EVALUATED SOCIAL MEDIA CANDIDATES & PHOTOS</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="modalCandidateCount" class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-textMuted">0 CANDIDATES</span>
+          <button id="btnCloseCandidatesModal" class="text-textMuted hover:text-signalRed font-mono text-lg px-2 py-0.5 cursor-pointer">&times;</button>
+        </div>
+      </div>
+      <div class="p-5 flex-1 overflow-y-auto flex flex-col gap-3 font-mono text-xs">
+        <div class="flex items-center justify-between text-textMuted text-[11px] pb-1 border-b border-border">
+          <span>All candidate URLs found by reverse search and evaluated against face embedding:</span>
+          <span id="modalThresholdBadge" class="text-textPrimary">Tolerance: &lt; 0.35</span>
+        </div>
+        <div id="modalCandidatesList" class="flex flex-col gap-3">
+          <div class="p-8 text-center text-textMuted font-mono">No scan executed yet. Run a search to populate candidate matches.</div>
+        </div>
+      </div>
+      <div class="px-5 py-3 border-t border-border bg-surfaceElevated flex justify-between items-center font-mono text-xs">
+        <span class="text-[10px] font-mono text-textMuted">Forensic Candidate Evaluation History</span>
+        <button id="btnCloseCandidatesModalBottom" class="px-4 py-1.5 rounded border border-border bg-bg hover:border-signalGreen text-xs font-mono text-textPrimary transition-colors cursor-pointer">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
   <script>
     // State
@@ -625,6 +669,18 @@
     const btnTamper = document.getElementById("btnTamper");
     const btnExplorer = document.getElementById("btnExplorer");
     const btnViewResultsModal = document.getElementById("btnViewResultsModal");
+
+    const btnHeaderCandidates = document.getElementById("btnHeaderCandidates");
+    const btnHeaderCandidatesText = document.getElementById("btnHeaderCandidatesText");
+    const btnViewCandidatesModal = document.getElementById("btnViewCandidatesModal");
+    const btnViewCandidatesText = document.getElementById("btnViewCandidatesText");
+
+    const modalCandidates = document.getElementById("modalCandidates");
+    const modalCandidateCount = document.getElementById("modalCandidateCount");
+    const modalThresholdBadge = document.getElementById("modalThresholdBadge");
+    const modalCandidatesList = document.getElementById("modalCandidatesList");
+    const btnCloseCandidatesModal = document.getElementById("btnCloseCandidatesModal");
+    const btnCloseCandidatesModalBottom = document.getElementById("btnCloseCandidatesModalBottom");
 
     const modalProofResults = document.getElementById("modalProofResults");
     const btnCloseProofModal = document.getElementById("btnCloseProofModal");
@@ -1047,20 +1103,25 @@
       }
     });
 
-    // Render Candidates Table with Images and Click-to-Preview
-    function renderCandidates(candidates, onSelectCandidate) {
-      candidateCountBadge.textContent = `${candidates.length} CANDIDATES`;
+    // Render Candidates Table and Modal with Images and Metrics
+    function renderCandidates(candidates) {
+      const count = candidates ? candidates.length : 0;
+      candidateCountBadge.textContent = `${count} CANDIDATES`;
+      btnHeaderCandidatesText.textContent = `Evaluated Candidates (${count})`;
+      btnViewCandidatesText.textContent = `Evaluated Candidates (${count})`;
+      modalCandidateCount.textContent = `${count} CANDIDATES EVALUATED`;
+      modalThresholdBadge.textContent = `Tolerance Threshold: < ${parseFloat(tolSlider.value).toFixed(2)}`;
+
       tblCandidatesBody.innerHTML = "";
+      modalCandidatesList.innerHTML = "";
 
       if (!candidates || candidates.length === 0) {
         tblCandidatesBody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-textMuted font-mono">No candidate matches returned by search engine.</td></tr>`;
+        modalCandidatesList.innerHTML = `<div class="p-8 text-center text-textMuted font-mono">No candidates evaluated.</div>`;
         return;
       }
 
       candidates.forEach((cand, idx) => {
-        const tr = document.createElement("tr");
-        tr.className = "border-b border-border hover:bg-surfaceElevated transition-colors cursor-pointer group";
-
         const distVal = cand.distance !== null && cand.distance !== undefined ? cand.distance.toFixed(4) : "N/A";
         const isMatched = cand.matched === true;
         const statusBadge = isMatched
@@ -1068,13 +1129,20 @@
           : `<span class="px-2 py-0.5 rounded bg-signalRed/10 border border-signalRed/60 text-signalRed text-[10px]">REJECTED</span>`;
 
         const candImgSrc = cand.image_url || cand.thumbnail;
-        const photoHtml = candImgSrc
+        const photoHtmlTable = candImgSrc
           ? `<img src="${candImgSrc}" alt="Candidate ${idx+1}" class="w-12 h-12 rounded border border-border group-hover:border-signalGreen object-cover bg-bg shrink-0 transition-colors" onerror="this.style.display='none'" />`
           : `<div class="w-12 h-12 rounded border border-border bg-bg flex items-center justify-center text-[10px] text-textMuted font-mono">NO IMG</div>`;
 
+        const photoHtmlModal = candImgSrc
+          ? `<img src="${candImgSrc}" alt="Candidate ${idx+1}" class="w-20 h-20 rounded-md border border-border object-cover bg-bg shrink-0" onerror="this.style.display='none'" />`
+          : `<div class="w-20 h-20 rounded-md border border-border bg-bg flex items-center justify-center text-[11px] text-textMuted font-mono shrink-0">NO IMAGE</div>`;
+
+        // 1. Append Table Row
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-border hover:bg-surfaceElevated transition-colors cursor-pointer group";
         tr.innerHTML = `
           <td class="py-2.5 px-4 text-textMuted font-bold">#${cand.position || (idx + 1)}</td>
-          <td class="py-2.5 px-4">${photoHtml}</td>
+          <td class="py-2.5 px-4">${photoHtmlTable}</td>
           <td class="py-2.5 px-4 font-bold text-textPrimary uppercase">${cand.platform || "WEB"}</td>
           <td class="py-2.5 px-4 text-textPrimary max-w-xs">
             <p class="text-xs font-bold text-textPrimary truncate" title="${cand.title || cand.url}">${cand.title || "Social Post"}</p>
@@ -1089,22 +1157,53 @@
           <td class="py-2.5 px-4 text-center">${statusBadge}</td>
           <td class="py-2.5 px-4 text-right">
             <button class="btn-inspect px-2 py-1 rounded border border-border bg-bg hover:border-signalGreen hover:text-signalGreen text-[10px] font-mono transition-colors">
-              INSPECT
+              VIEW
             </button>
           </td>
         `;
-
-        // Click on row or inspect button loads candidate into preview
-        tr.addEventListener("click", () => {
-          if (onSelectCandidate) {
-            onSelectCandidate(cand, cand.matched === true);
-            appendLog(`[INSPECT] Loaded candidate #${cand.position || (idx + 1)} (${cand.platform}) into comparison viewer.`);
-          }
-        });
-
+        tr.addEventListener("click", () => modalCandidates.classList.remove("hidden"));
         tblCandidatesBody.appendChild(tr);
+
+        // 2. Append Modal Rich Card
+        const card = document.createElement("div");
+        card.className = `p-4 rounded-md border ${isMatched ? 'border-signalGreen/50 bg-surfaceElevated' : 'border-border bg-bg'} flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:border-signalGreen/40 transition-colors`;
+        card.innerHTML = `
+          <div class="flex items-start gap-4 w-full sm:w-auto">
+            ${photoHtmlModal}
+            <div class="flex flex-col gap-1.5 flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-bold font-mono text-textMuted">#${cand.position || (idx + 1)}</span>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-surface border border-border text-textPrimary uppercase font-bold">${cand.platform || "WEB"}</span>
+                <span class="text-xs font-bold text-textPrimary truncate max-w-sm">${cand.title || "Social Media Post"}</span>
+              </div>
+              <a href="${cand.url}" target="_blank" class="text-[11px] text-textMuted hover:text-signalGreen hover:underline truncate block" title="${cand.url}">
+                ${cand.url}
+              </a>
+              ${cand.author ? `<span class="text-[11px] text-textSecondary">Author: <strong class="text-textPrimary">${cand.author}</strong></span>` : ''}
+              ${cand.text ? `<p class="text-[11px] text-textSecondary line-clamp-2 italic bg-surface/60 p-1.5 rounded border border-border/50 font-sans">"${cand.text}"</p>` : ''}
+            </div>
+          </div>
+          <div class="flex flex-col items-start sm:items-end gap-1.5 shrink-0 self-stretch sm:self-auto justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-border">
+            <div class="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0.5">
+              <span class="text-[10px] text-textMuted font-mono">COSINE DISTANCE:</span>
+              <span class="font-mono text-sm ${isMatched ? "text-signalGreen font-bold" : "text-signalRed font-bold"}">${distVal}</span>
+            </div>
+            <div>${statusBadge}</div>
+            <span class="text-[10px] text-textMuted font-mono">Threshold: &lt; ${parseFloat(tolSlider.value).toFixed(2)}</span>
+          </div>
+        `;
+        modalCandidatesList.appendChild(card);
       });
     }
+
+    // Modal Trigger Actions for Evaluated Candidates
+    btnHeaderCandidates.addEventListener("click", () => modalCandidates.classList.remove("hidden"));
+    btnViewCandidatesModal.addEventListener("click", () => modalCandidates.classList.remove("hidden"));
+    btnCloseCandidatesModal.addEventListener("click", () => modalCandidates.classList.add("hidden"));
+    btnCloseCandidatesModalBottom.addEventListener("click", () => modalCandidates.classList.add("hidden"));
+    modalCandidates.addEventListener("click", (e) => {
+      if (e.target === modalCandidates) modalCandidates.classList.add("hidden");
+    });
 
     // LIVE VERIFY RECORD ACTION
     btnVerify.addEventListener("click", async () => {
