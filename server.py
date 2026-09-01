@@ -253,12 +253,29 @@ async def run_pipeline(
         log(f"Search executed in {elapsed_search:.2f}s.")
         log(f"Google Lens matches: {matcher_result.total_lens_matches}, Social candidates: {matcher_result.total_social_candidates}")
 
-        for cand in matcher_result.candidate_logs:
+        cand_dir = OUT_DIR / "candidates"
+        cand_dir.mkdir(parents=True, exist_ok=True)
+
+        for idx, cand in enumerate(matcher_result.candidate_logs, start=1):
             cand_url = cand.get("url", "")
             cand_dist = cand.get("distance")
             cand_status = cand.get("status", "")
             dist_str = f"dist={cand_dist:.4f}" if cand_dist is not None else "no_face"
             log(f"Candidate [{cand.get('platform', 'unknown')}]: {cand_url[:50]}... ({dist_str}) -> {cand_status}")
+
+            # Persist candidate image locally if downloaded bytes are present
+            if cand.get("_image_bytes"):
+                cand_path = cand_dir / f"cand_{idx}.jpg"
+                try:
+                    cand_path.write_bytes(cand["_image_bytes"])
+                    cand["image_url"] = f"/out/candidates/cand_{idx}.jpg"
+                except Exception:
+                    cand["image_url"] = cand.get("thumbnail", "")
+                del cand["_image_bytes"]
+            elif cand.get("thumbnail"):
+                cand["image_url"] = cand["thumbnail"]
+            else:
+                cand["image_url"] = None
 
     except Exception as exc:
         log(f"ERROR in Search/Matcher: {exc}")
@@ -269,6 +286,15 @@ async def run_pipeline(
 
     if not matcher_result.is_match_found or not matcher_result.accepted_record:
         log(f"NO MATCH FOUND: {matcher_result.reason}")
+
+        # Find closest candidate to show in preview
+        closest_cand = None
+        cands_with_dist = [c for c in matcher_result.candidate_logs if c.get("distance") is not None]
+        if cands_with_dist:
+            closest_cand = min(cands_with_dist, key=lambda c: c["distance"])
+        elif matcher_result.candidate_logs:
+            closest_cand = matcher_result.candidate_logs[0]
+
         return JSONResponse(
             content={
                 "success": True,
@@ -277,6 +303,7 @@ async def run_pipeline(
                 "face": face_meta,
                 "input_image_url": "/out/last_scan.jpg",
                 "cropped_face_url": cropped_face_url,
+                "closest_candidate": closest_cand,
                 "candidates": matcher_result.candidate_logs,
                 "logs": logs,
                 "stage": 2,

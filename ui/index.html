@@ -498,7 +498,10 @@
         <!-- CANDIDATE MATCHES TABLE -->
         <div class="rounded-md border border-border bg-surface flex flex-col overflow-hidden">
           <div class="px-4 py-3 border-b border-border bg-surfaceElevated flex justify-between items-center">
-            <h2 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">EVALUATED CANDIDATE MATCHES</h2>
+            <div class="flex items-center gap-3">
+              <h2 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">EVALUATED CANDIDATE MATCHES</h2>
+              <span class="text-[11px] font-mono text-textMuted hidden sm:inline">&bull; Click any candidate to view its photo and score in the comparator</span>
+            </div>
             <span id="candidateCountBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-textMuted">0 CANDIDATES</span>
           </div>
 
@@ -506,16 +509,18 @@
             <table class="w-full text-left border-collapse text-xs font-mono">
               <thead>
                 <tr class="border-b border-border text-textMuted bg-bg">
-                  <th class="py-2.5 px-4 font-medium w-14">#</th>
+                  <th class="py-2.5 px-4 font-medium w-12">#</th>
+                  <th class="py-2.5 px-4 font-medium w-20">PHOTO</th>
                   <th class="py-2.5 px-4 font-medium w-28">PLATFORM</th>
-                  <th class="py-2.5 px-4 font-medium">DISCOVERED URL</th>
+                  <th class="py-2.5 px-4 font-medium">DISCOVERED URL & TITLE</th>
                   <th class="py-2.5 px-4 font-medium w-36">COSINE DISTANCE</th>
-                  <th class="py-2.5 px-4 font-medium w-28 text-right">STATUS</th>
+                  <th class="py-2.5 px-4 font-medium w-24 text-center">STATUS</th>
+                  <th class="py-2.5 px-4 font-medium w-20 text-right">ACTION</th>
                 </tr>
               </thead>
               <tbody id="tblCandidatesBody">
                 <tr>
-                  <td colspan="5" class="py-6 text-center text-textMuted font-mono">No scan executed yet. Run a search to populate candidate matches.</td>
+                  <td colspan="7" class="py-6 text-center text-textMuted font-mono">No scan executed yet. Run a search to populate candidate matches.</td>
                 </tr>
               </tbody>
             </table>
@@ -897,20 +902,71 @@
         // Render Candidates Table
         renderCandidates(data.candidates || []);
 
+        // Helper to load any candidate into the comparison viewer
+        function loadCandidateIntoPreview(cand, isAccepted = false) {
+          if (!cand) return;
+          const candImg = cand.image_url || cand.thumbnail;
+          if (candImg) {
+            imgMatchDisplay.src = `${candImg}?t=${Date.now()}`;
+            imgMatchDisplay.classList.remove("hidden");
+            imgMatchPlaceholder.classList.add("hidden");
+          } else {
+            imgMatchDisplay.classList.add("hidden");
+            imgMatchPlaceholder.classList.remove("hidden");
+          }
+
+          matchPlatformTag.textContent = (cand.platform || "WEB").toUpperCase();
+          linkPostUrl.href = cand.url || "#";
+          linkPostUrl.textContent = cand.url || "--";
+          txtAuthor.textContent = cand.author || "Candidate Post";
+          txtPostSnippet.textContent = cand.text || cand.title || "Evaluated candidate from Google Lens search.";
+
+          if (isAccepted) {
+            matchScoreBadge.textContent = "MATCH CONFIRMED";
+            matchScoreBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-signalGreen text-signalGreen";
+            const acc = (1.0 - (cand.distance || 0.0)) * 100.0;
+            readoutAccuracy.textContent = `${acc.toFixed(1)}%`;
+            readoutAccuracy.className = "text-2xl font-bold font-mono text-signalGreen";
+            barAccuracy.style.width = `${Math.max(0, acc)}%`;
+            barAccuracy.className = "h-full bg-signalGreen transition-all duration-500";
+            valDistance.textContent = (cand.distance !== undefined && cand.distance !== null) ? cand.distance.toFixed(4) : "--";
+          } else {
+            matchScoreBadge.textContent = "REJECTED (DIST >= TOL)";
+            matchScoreBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-signalRed text-signalRed";
+            if (cand.distance !== undefined && cand.distance !== null) {
+              const acc = Math.max(0, (1.0 - cand.distance) * 100.0);
+              readoutAccuracy.textContent = `${acc.toFixed(1)}%`;
+              readoutAccuracy.className = "text-2xl font-bold font-mono text-signalRed";
+              barAccuracy.style.width = `${acc}%`;
+              barAccuracy.className = "h-full bg-signalRed transition-all duration-500";
+              valDistance.textContent = `${cand.distance.toFixed(4)} (FAIL)`;
+            } else {
+              readoutAccuracy.textContent = "0.0%";
+              readoutAccuracy.className = "text-2xl font-bold font-mono text-signalRed";
+              barAccuracy.style.width = "0%";
+              valDistance.textContent = "NO FACE IN IMAGE";
+            }
+          }
+          valTolerance.textContent = `< ${parseFloat(tolSlider.value).toFixed(2)}`;
+        }
+
+        // Render Candidates Table with Pictures
+        renderCandidates(data.candidates || [], loadCandidateIntoPreview);
+
         if (!data.matched) {
           setStepState(2, "failed", "NO MATCH");
           hideBanners();
           bannerError.classList.remove("hidden");
           errorBannerTitle.textContent = "NO VERIFIED MATCH";
           errorBannerText.textContent = data.reason || "Google Lens candidates were evaluated, but none satisfied the face tolerance threshold.";
-          matchScoreBadge.textContent = "REJECTED";
-          matchScoreBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-signalRed text-signalRed";
-          readoutAccuracy.textContent = "0.0%";
-          readoutAccuracy.className = "text-2xl font-bold font-mono text-signalRed";
-          barAccuracy.style.width = "0%";
-          barAccuracy.className = "h-full bg-signalRed transition-all duration-500";
-          valDistance.textContent = "NO PASS";
-          valTolerance.textContent = `< ${parseFloat(tolSlider.value).toFixed(2)}`;
+
+          // Automatically preview the closest evaluated candidate picture
+          if (data.closest_candidate) {
+            loadCandidateIntoPreview(data.closest_candidate, false);
+            appendLog(`[PREVIEW] Displaying closest evaluated candidate #${data.closest_candidate.position || 1} (dist: ${data.closest_candidate.distance})`);
+          } else if (data.candidates && data.candidates.length > 0) {
+            loadCandidateIntoPreview(data.candidates[0], false);
+          }
           return;
         }
 
@@ -921,26 +977,14 @@
         lastRecordPayload = data;
 
         // Render Match Result Card
-        matchPlatformTag.textContent = (data.post.platform || "WEB").toUpperCase();
-        matchScoreBadge.textContent = "MATCH CONFIRMED";
-        matchScoreBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-signalGreen text-signalGreen";
-
-        readoutAccuracy.textContent = `${data.accuracy_pct.toFixed(1)}%`;
-        readoutAccuracy.className = "text-2xl font-bold font-mono text-signalGreen";
-        barAccuracy.style.width = `${data.accuracy_pct}%`;
-        barAccuracy.className = "h-full bg-signalGreen transition-all duration-500";
-        valDistance.textContent = data.cosine_distance.toFixed(4);
-
-        linkPostUrl.href = data.post.post_url;
-        linkPostUrl.textContent = data.post.post_url;
-        txtAuthor.textContent = data.post.author || "N/A (Public Author)";
-        txtPostSnippet.textContent = data.post.text || "No text body extracted.";
-
-        if (data.matched_image_url) {
-          imgMatchDisplay.src = `${data.matched_image_url}?t=${Date.now()}`;
-          imgMatchDisplay.classList.remove("hidden");
-          imgMatchPlaceholder.classList.add("hidden");
-        }
+        loadCandidateIntoPreview({
+          platform: data.post.platform,
+          url: data.post.post_url,
+          author: data.post.author,
+          text: data.post.text,
+          distance: data.cosine_distance,
+          image_url: data.matched_image_url,
+        }, true);
 
         // Render Blockchain Proof Card
         proofStatusBadge.textContent = data.anchor.status_label || "ANCHORED";
@@ -980,37 +1024,61 @@
       }
     });
 
-    // Render Candidates Table
-    function renderCandidates(candidates) {
+    // Render Candidates Table with Images and Click-to-Preview
+    function renderCandidates(candidates, onSelectCandidate) {
       candidateCountBadge.textContent = `${candidates.length} CANDIDATES`;
       tblCandidatesBody.innerHTML = "";
 
       if (!candidates || candidates.length === 0) {
-        tblCandidatesBody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-textMuted font-mono">No candidate matches returned by search engine.</td></tr>`;
+        tblCandidatesBody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-textMuted font-mono">No candidate matches returned by search engine.</td></tr>`;
         return;
       }
 
       candidates.forEach((cand, idx) => {
         const tr = document.createElement("tr");
-        tr.className = "border-b border-border hover:bg-surfaceElevated transition-colors";
+        tr.className = "border-b border-border hover:bg-surfaceElevated transition-colors cursor-pointer group";
 
         const distVal = cand.distance !== null && cand.distance !== undefined ? cand.distance.toFixed(4) : "N/A";
         const isMatched = cand.matched === true;
         const statusBadge = isMatched
-          ? `<span class="px-2 py-0.5 rounded bg-signalGreen/10 border border-signalGreen text-signalGreen text-[10px]">ACCEPTED</span>`
+          ? `<span class="px-2 py-0.5 rounded bg-signalGreen/10 border border-signalGreen text-signalGreen text-[10px] font-bold">ACCEPTED</span>`
           : `<span class="px-2 py-0.5 rounded bg-signalRed/10 border border-signalRed/60 text-signalRed text-[10px]">REJECTED</span>`;
 
+        const candImgSrc = cand.image_url || cand.thumbnail;
+        const photoHtml = candImgSrc
+          ? `<img src="${candImgSrc}" alt="Candidate ${idx+1}" class="w-12 h-12 rounded border border-border group-hover:border-signalGreen object-cover bg-bg shrink-0 transition-colors" onerror="this.style.display='none'" />`
+          : `<div class="w-12 h-12 rounded border border-border bg-bg flex items-center justify-center text-[10px] text-textMuted font-mono">NO IMG</div>`;
+
         tr.innerHTML = `
-          <td class="py-3 px-4 text-textMuted">#${cand.position || (idx + 1)}</td>
-          <td class="py-3 px-4 font-bold text-textPrimary uppercase">${cand.platform || "WEB"}</td>
-          <td class="py-3 px-4 text-textPrimary truncate max-w-xs">
-            <a href="${cand.url}" target="_blank" class="hover:text-signalGreen hover:underline truncate block" title="${cand.url}">
+          <td class="py-2.5 px-4 text-textMuted font-bold">#${cand.position || (idx + 1)}</td>
+          <td class="py-2.5 px-4">${photoHtml}</td>
+          <td class="py-2.5 px-4 font-bold text-textPrimary uppercase">${cand.platform || "WEB"}</td>
+          <td class="py-2.5 px-4 text-textPrimary max-w-xs">
+            <p class="text-xs font-bold text-textPrimary truncate" title="${cand.title || cand.url}">${cand.title || "Social Post"}</p>
+            <a href="${cand.url}" target="_blank" class="hover:text-signalGreen hover:underline truncate block text-[11px] text-textMuted" title="${cand.url}" onclick="event.stopPropagation()">
               ${cand.url}
             </a>
           </td>
-          <td class="py-3 px-4 font-mono ${isMatched ? "text-signalGreen font-bold" : "text-textMuted"}">${distVal}</td>
-          <td class="py-3 px-4 text-right">${statusBadge}</td>
+          <td class="py-2.5 px-4 font-mono ${isMatched ? "text-signalGreen font-bold" : "text-textMuted"}">
+            <div>${distVal}</div>
+            ${cand.distance !== null && cand.distance !== undefined ? `<div class="w-20 h-1 rounded bg-bg border border-border mt-1 overflow-hidden"><div class="h-full ${isMatched ? 'bg-signalGreen' : 'bg-signalRed'}" style="width: ${Math.max(0, (1 - cand.distance)*100)}%"></div></div>` : ''}
+          </td>
+          <td class="py-2.5 px-4 text-center">${statusBadge}</td>
+          <td class="py-2.5 px-4 text-right">
+            <button class="btn-inspect px-2 py-1 rounded border border-border bg-bg hover:border-signalGreen hover:text-signalGreen text-[10px] font-mono transition-colors">
+              INSPECT
+            </button>
+          </td>
         `;
+
+        // Click on row or inspect button loads candidate into preview
+        tr.addEventListener("click", () => {
+          if (onSelectCandidate) {
+            onSelectCandidate(cand, cand.matched === true);
+            appendLog(`[INSPECT] Loaded candidate #${cand.position || (idx + 1)} (${cand.platform}) into comparison viewer.`);
+          }
+        });
+
         tblCandidatesBody.appendChild(tr);
       });
     }

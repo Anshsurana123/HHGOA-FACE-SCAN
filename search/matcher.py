@@ -153,6 +153,9 @@ def find_verified_social_post(
             "url": url,
             "platform": platform,
             "title": candidate.get("title", ""),
+            "thumbnail": candidate.get("thumbnail", ""),
+            "author": "",
+            "text": "",
             "distance": None,
             "matched": False,
             "status": "PROCESSING",
@@ -161,6 +164,8 @@ def find_verified_social_post(
         try:
             # Fetch post metadata using shared function
             post_data = fetch_post(url)
+            candidate_log["author"] = post_data.get("author", "")
+            candidate_log["text"] = post_data.get("text", "")
 
             # Look for face in post image or candidate thumbnail
             img_bytes_to_check = post_data.get("_image_bytes")
@@ -174,6 +179,9 @@ def find_verified_social_post(
                         post_data["_image_bytes"] = img_bytes_to_check
                 except Exception:
                     pass
+
+            if img_bytes_to_check:
+                candidate_log["_image_bytes"] = img_bytes_to_check
 
             if not img_bytes_to_check:
                 candidate_log["status"] = "REJECTED: No image could be retrieved from post."
