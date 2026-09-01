@@ -72,11 +72,15 @@ def search_google_lens(
                 for item in visual_matches:
                     link = item.get("link")
                     if link:
+                        orig_img = item.get("original_image") or item.get("original") or item.get("image") or ""
+                        if isinstance(orig_img, dict):
+                            orig_img = orig_img.get("link", "")
                         candidates.append({
                             "title": item.get("title", ""),
                             "link": link,
                             "source": item.get("source", ""),
                             "thumbnail": item.get("thumbnail", ""),
+                            "original_image": orig_img,
                             "position": item.get("position", len(candidates) + 1),
                         })
 

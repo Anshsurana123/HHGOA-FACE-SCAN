@@ -87,8 +87,22 @@ def is_social_media_url(url: str) -> bool:
 
 
 def _http_get(url: str, headers: dict | None = None, timeout: int = 4, max_retries: int = 0) -> requests.Response:
-    """Fast HTTP GET with non-blocking timeouts."""
-    req_headers = {"User-Agent": USER_AGENT, "Accept": "*/*"}
+    """Fast HTTP GET with non-blocking timeouts and social bot headers when appropriate."""
+    u_lower = url.lower()
+    if "instagram.com" in u_lower or "facebook.com" in u_lower or "threads.net" in u_lower:
+        ua = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.html)"
+    elif "twitter.com" in u_lower or "x.com" in u_lower or "t.co" in u_lower:
+        ua = "Twitterbot/1.0"
+    elif "linkedin.com" in u_lower:
+        ua = "LinkedInBot/1.0 (snap; +http://www.linkedin.com)"
+    else:
+        ua = USER_AGENT
+
+    req_headers = {
+        "User-Agent": ua,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+    }
     if headers:
         req_headers.update(headers)
 
