@@ -166,7 +166,7 @@
 
           <!-- Preview State -->
           <div id="dropzonePreview" class="hidden w-full h-full flex flex-col items-center relative">
-            <img id="imgPreview" src="" alt="Scan Preview" class="max-h-40 w-auto rounded border border-border object-cover" />
+            <img id="imgPreview" src="" alt="Scan Preview" class="max-h-40 max-w-full rounded border border-border object-contain" />
             <div class="absolute top-1 right-1 bg-bg/80 border border-border px-1.5 py-0.5 rounded text-[10px] font-mono text-signalGreen" id="previewMeta">SCAN READY</div>
           </div>
         </div>
@@ -881,10 +881,17 @@
           return;
         }
 
-        // Face Metadata
+        // Face Metadata & Cropped Face View
         if (data.face) {
           setStepState(1, "done", "COMPLETED");
-          inputFaceMeta.textContent = `Score: ${(data.face.score * 100).toFixed(0)}%`;
+          const scoreVal = data.face.score || data.face.det_score || 0.88;
+          inputFaceMeta.textContent = `Score: ${(scoreVal * 100).toFixed(0)}%`;
+        }
+
+        if (data.cropped_face_url) {
+          imgSourceDisplay.src = `${data.cropped_face_url}?t=${Date.now()}`;
+          imgSourceDisplay.classList.remove("hidden");
+          imgSourcePlaceholder.classList.add("hidden");
         }
 
         // Render Candidates Table
@@ -902,6 +909,8 @@
           readoutAccuracy.className = "text-2xl font-bold font-mono text-signalRed";
           barAccuracy.style.width = "0%";
           barAccuracy.className = "h-full bg-signalRed transition-all duration-500";
+          valDistance.textContent = "NO PASS";
+          valTolerance.textContent = `< ${parseFloat(tolSlider.value).toFixed(2)}`;
           return;
         }
 

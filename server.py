@@ -188,6 +188,27 @@ async def run_pipeline(
         face_meta["total_faces"] = total_faces
         log(f"InsightFace detected {total_faces} face(s) in {elapsed_face:.2f}s.")
         log(f"Selected bbox: {face_meta.get('bbox')}, confidence: {score:.4f}")
+
+        # Crop face closeup for UI presentation
+        cropped_face_url = "/out/last_scan.jpg"
+        try:
+            pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            w, h = pil_img.size
+            bx1, by1, bx2, by2 = face_meta["bbox"]
+            bw, bh = bx2 - bx1, by2 - by1
+            pad_x, pad_y = bw * 0.35, bh * 0.35
+            crop_box = (
+                max(0, int(bx1 - pad_x)),
+                max(0, int(by1 - pad_y)),
+                min(w, int(bx2 + pad_x)),
+                min(h, int(by2 + pad_y)),
+            )
+            cropped_img = pil_img.crop(crop_box)
+            crop_path = OUT_DIR / "cropped_face.jpg"
+            cropped_img.save(crop_path, format="JPEG", quality=95)
+            cropped_face_url = "/out/cropped_face.jpg"
+        except Exception:
+            pass
     except NoFaceFound:
         log("ERROR: No human face detected in the input scan.")
         return JSONResponse(
@@ -254,6 +275,8 @@ async def run_pipeline(
                 "matched": False,
                 "reason": matcher_result.reason,
                 "face": face_meta,
+                "input_image_url": "/out/last_scan.jpg",
+                "cropped_face_url": cropped_face_url,
                 "candidates": matcher_result.candidate_logs,
                 "logs": logs,
                 "stage": 2,
@@ -372,6 +395,7 @@ async def run_pipeline(
             "image_sha256": accepted_post.get("image_sha256", ""),
         },
         "input_image_url": "/out/last_scan.jpg",
+        "cropped_face_url": cropped_face_url,
         "matched_image_url": matched_image_url,
         "anchor": anchor_info,
         "candidates": matcher_result.candidate_logs,
