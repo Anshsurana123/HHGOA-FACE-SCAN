@@ -122,3 +122,11 @@ def test_local_blockchain_tamper_detection():
         is_intact, msg = tampered_chain.verify_chain_integrity()
         assert is_intact is False
         assert "mismatch" in msg
+
+
+def test_web3_client_verify_interface():
+    """Validates that Web3Client implements both verify and verify_on_chain uniformly."""
+    from chain.web3_client import Web3Client
+    assert hasattr(Web3Client, "verify")
+    assert hasattr(Web3Client, "verify_on_chain")
+    assert hasattr(Web3Client, "anchor")

@@ -38,6 +38,16 @@ class Web3Client:
         self.w3, self.active_rpc = self._get_connection()
         self.contract_address, self.abi = self._load_contract_config()
         self.contract = self.w3.eth.contract(address=self.contract_address, abi=self.abi)
+        priv_key = os.getenv("PRIVATE_KEY")
+        if priv_key:
+            if not priv_key.startswith("0x"):
+                priv_key = "0x" + priv_key
+            try:
+                self.account = self.w3.eth.account.from_key(priv_key)
+            except Exception:
+                self.account = None
+        else:
+            self.account = None
 
     def _get_connection(self) -> tuple[Web3, str]:
         for rpc in FALLBACK_RPCS:
@@ -172,6 +182,17 @@ class Web3Client:
 
         except Exception as exc:
             return False, None, f"Failed to query smart contract: {exc}"
+
+    def verify(self, content_hash: str, expected_metadata: Any = None) -> tuple[bool, dict[str, Any] | None, str]:
+        """
+        Uniform verification method compatible with LocalBlockchain.verify().
+        """
+        expected_url = None
+        if isinstance(expected_metadata, dict):
+            expected_url = expected_metadata.get("post_url")
+        elif isinstance(expected_metadata, str):
+            expected_url = expected_metadata
+        return self.verify_on_chain(content_hash, expected_post_url=expected_url)
 
     def get_status(self) -> dict[str, Any]:
         """Returns connection and contract status."""
