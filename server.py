@@ -26,6 +26,7 @@ load_dotenv()
 from faceid.encoder import (
     encode_face,
     encode_face_with_meta,
+    extract_face_crop,
     cosine_distance,
     NoFaceFound,
     ImageReadError,
@@ -175,40 +176,26 @@ async def run_pipeline(
         f.write(image_bytes)
 
     # =========================================================================
-    # STAGE 1: Face Detection & Encoding
+    # STAGE 1: Face Detection & Focused Facial Extraction
     # =========================================================================
-    log("--- STAGE 1: Face Identification & Extraction ---")
+    log("--- STAGE 1: Face Identification & Facial Crop Extraction ---")
     start_t = time.time()
     try:
-        embedding, face_meta = encode_face_with_meta(image_bytes)
+        cropped_face_bytes, embedding, face_meta = extract_face_crop(image_bytes, margin=0.35)
         elapsed_face = time.time() - start_t
         total_faces = face_meta.get("total_faces_detected", 1)
         score = face_meta.get("det_score") or face_meta.get("score") or 0.0
         face_meta["score"] = score
         face_meta["total_faces"] = total_faces
-        log(f"InsightFace detected {total_faces} face(s) in {elapsed_face:.2f}s.")
-        log(f"Selected bbox: {face_meta.get('bbox')}, confidence: {score:.4f}")
+        
+        # Save cropped face to out/cropped_face.jpg
+        crop_path = OUT_DIR / "cropped_face.jpg"
+        crop_path.write_bytes(cropped_face_bytes)
+        cropped_face_url = "/out/cropped_face.jpg"
 
-        # Crop face closeup for UI presentation
-        cropped_face_url = "/out/last_scan.jpg"
-        try:
-            pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-            w, h = pil_img.size
-            bx1, by1, bx2, by2 = face_meta["bbox"]
-            bw, bh = bx2 - bx1, by2 - by1
-            pad_x, pad_y = bw * 0.35, bh * 0.35
-            crop_box = (
-                max(0, int(bx1 - pad_x)),
-                max(0, int(by1 - pad_y)),
-                min(w, int(bx2 + pad_x)),
-                min(h, int(by2 + pad_y)),
-            )
-            cropped_img = pil_img.crop(crop_box)
-            crop_path = OUT_DIR / "cropped_face.jpg"
-            cropped_img.save(crop_path, format="JPEG", quality=95)
-            cropped_face_url = "/out/cropped_face.jpg"
-        except Exception:
-            pass
+        log(f"InsightFace detected {total_faces} face(s) in {elapsed_face:.2f}s.")
+        log(f"Primary face bbox: {face_meta.get('bbox')}, confidence: {score:.4f}")
+        log(f"Extracted focused facial crop ({len(cropped_face_bytes)} bytes) for reverse image search.")
     except NoFaceFound:
         log("ERROR: No human face detected in the input scan.")
         return JSONResponse(
@@ -228,9 +215,9 @@ async def run_pipeline(
         )
 
     # =========================================================================
-    # STAGE 2: Reverse Search & Re-Verification
+    # STAGE 2: Reverse Search (Face Portrait) & Re-Verification
     # =========================================================================
-    log("--- STAGE 2: Web Search & Face Re-Match ---")
+    log("--- STAGE 2: Facial Reverse Image Search & Face Re-Match ---")
     serpapi_key = os.getenv("SERPAPI_KEY")
     imgbb_key = os.getenv("IMGBB_KEY")
 
@@ -242,7 +229,7 @@ async def run_pipeline(
     try:
         matcher_result: MatcherResult = find_verified_social_post(
             input_embedding=embedding,
-            image_path_or_bytes=image_bytes,
+            image_path_or_bytes=cropped_face_bytes,  # <-- Pass cropped face so search focuses on the face
             tol=tolerance,
             serpapi_key=serpapi_key,
             imgbb_key=imgbb_key,

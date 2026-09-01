@@ -96,3 +96,16 @@ def test_encode_face_with_meta():
     assert len(meta["bbox"]) == 4
     assert meta["total_faces_detected"] >= 1
     assert meta["det_score"] is not None and meta["det_score"] > 0.5
+
+
+def test_extract_face_crop():
+    """Validates that extract_face_crop returns valid JPEG bytes, 512-d embedding, and metadata."""
+    from faceid import extract_face_crop
+    img_path = os.path.join(FIXTURES_DIR, "person1_a.jpg")
+    crop_bytes, emb, meta = extract_face_crop(img_path, margin=0.35)
+
+    assert len(crop_bytes) > 500
+    assert crop_bytes.startswith(b"\xff\xd8")  # Valid JPEG header
+    assert len(emb) == 512
+    assert "crop_box" in meta
+    assert len(meta["crop_box"]) == 4

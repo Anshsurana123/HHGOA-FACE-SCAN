@@ -134,6 +134,65 @@ def encode_face_with_meta(image_input: Union[str, bytes, np.ndarray]) -> tuple[n
     return encoder.encode_face(image_input)
 
 
+def extract_face_crop(
+    image_input: Union[str, bytes, np.ndarray],
+    margin: float = 0.35,
+) -> tuple[bytes, np.ndarray, dict]:
+    """
+    Detects the primary face, extracts a cropped JPEG of the face region
+    (with margin for natural head/hair context), and returns (face_crop_bytes, embedding, metadata).
+    
+    This ensures Google Lens searches strictly on the person's face portrait
+    rather than clothes, body, or background objects.
+    """
+    encoder = FaceEncoder.get_instance()
+    img_bgr = encoder.read_image(image_input)
+    faces = encoder.app.get(img_bgr)
+    if not faces:
+        raise NoFaceFound("No face detected in the input image.")
+
+    largest_face = max(
+        faces,
+        key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1])
+    )
+
+    embedding = largest_face.normed_embedding
+    if embedding is None:
+        raw = largest_face.embedding
+        norm = np.linalg.norm(raw)
+        if norm == 0:
+            raise FaceIdentificationError("Zero-norm face embedding generated.")
+        embedding = raw / norm
+
+    # Calculate crop coordinates with margin
+    h, w, _ = img_bgr.shape
+    x1, y1, x2, y2 = largest_face.bbox
+    bw, bh = x2 - x1, y2 - y1
+    pad_x, pad_y = bw * margin, bh * margin
+    crop_x1 = max(0, int(x1 - pad_x))
+    crop_y1 = max(0, int(y1 - pad_y))
+    crop_x2 = min(w, int(x2 + pad_x))
+    crop_y2 = min(h, int(y2 + pad_y))
+
+    face_crop_bgr = img_bgr[crop_y1:crop_y2, crop_x1:crop_x2]
+    # Encode as high-quality JPEG
+    success, buffer = cv2.imencode(".jpg", face_crop_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+    if not success:
+        raise FaceIdentificationError("Failed to encode cropped face region to JPEG.")
+    face_crop_bytes = buffer.tobytes()
+
+    metadata = {
+        "bbox": [float(c) for c in largest_face.bbox],
+        "crop_box": [crop_x1, crop_y1, crop_x2, crop_y2],
+        "det_score": float(largest_face.det_score) if hasattr(largest_face, "det_score") else None,
+        "gender": int(largest_face.gender) if hasattr(largest_face, "gender") and largest_face.gender is not None else None,
+        "age": int(largest_face.age) if hasattr(largest_face, "age") and largest_face.age is not None else None,
+        "total_faces_detected": len(faces),
+    }
+
+    return face_crop_bytes, np.asarray(embedding, dtype=np.float32), metadata
+
+
 def cosine_distance(a: np.ndarray, b: np.ndarray) -> float:
     """Computes cosine distance 1.0 - (a . b) / (||a|| * ||b||)."""
     a = np.asarray(a, dtype=np.float32).flatten()

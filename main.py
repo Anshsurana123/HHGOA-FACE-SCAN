@@ -17,6 +17,7 @@ load_dotenv(".env.txt")
 from faceid.encoder import (
     FaceEncoder,
     encode_face_with_meta,
+    extract_face_crop,
     cosine_distance,
     NoFaceFound,
     ImageReadError,
@@ -69,19 +70,20 @@ def run_cmd(image: str, network: str, tol: float, offline_demo: bool, out_dir: s
     # =========================================================================
     # STAGE 1: Face Identification & Embedding Extraction
     # =========================================================================
-    click.secho("--- STAGE 1: Face Identification ---", fg="blue", bold=True)
+    click.secho("--- STAGE 1: Face Identification & Facial Crop Extraction ---", fg="blue", bold=True)
     try:
         start_t = time.time()
-        embedding, meta = encode_face_with_meta(image)
+        cropped_face_bytes, embedding, meta = extract_face_crop(image, margin=0.35)
         elapsed = time.time() - start_t
         bbox_str = ", ".join(f"{int(c)}" for c in meta["bbox"])
-        det_score_str = f"{meta['det_score']:.4f}" if meta["det_score"] is not None else "N/A"
+        det_score_str = f"{meta['det_score']:.4f}" if meta['det_score'] is not None else "N/A"
 
         click.secho(f" [OK] Face detected in {elapsed:.2f}s", fg="green")
         click.echo(f"      - Total faces detected: {meta['total_faces_detected']}")
         click.echo(f"      - Selected largest face bbox: [{bbox_str}]")
         click.echo(f"      - Detection confidence score: {det_score_str}")
         click.echo(f"      - Embedding dimensions: {len(embedding)} (L2-normalized)")
+        click.echo(f"      - Extracted focused facial crop ({len(cropped_face_bytes)} bytes) for reverse search")
     except NoFaceFound as e:
         click.secho(f" [ERROR] Stage 1 Failed: {e}", fg="red", bold=True)
         sys.exit(1)
@@ -99,7 +101,7 @@ def run_cmd(image: str, network: str, tol: float, offline_demo: bool, out_dir: s
     try:
         match_result = find_verified_social_post(
             input_embedding=embedding,
-            image_path_or_bytes=image,
+            image_path_or_bytes=cropped_face_bytes,
             tol=tol,
             offline_demo=offline_demo,
         )
@@ -233,7 +235,7 @@ def search_cmd(image: str, tol: float, offline_demo: bool):
     click.echo(f"    - Tolerance: {tol}\n")
 
     try:
-        embedding, meta = encode_face_with_meta(image)
+        cropped_face_bytes, embedding, meta = extract_face_crop(image, margin=0.35)
         click.secho(f" [OK] Face detected: bbox={meta['bbox']}, det_score={meta['det_score']:.4f}", fg="green")
     except Exception as e:
         click.secho(f" [ERROR] Face detection failed: {e}", fg="red", bold=True)
@@ -242,7 +244,7 @@ def search_cmd(image: str, tol: float, offline_demo: bool):
     try:
         match_result = find_verified_social_post(
             input_embedding=embedding,
-            image_path_or_bytes=image,
+            image_path_or_bytes=cropped_face_bytes,
             tol=tol,
             offline_demo=offline_demo,
         )
