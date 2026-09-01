@@ -199,10 +199,41 @@
         <p class="text-[11px] text-textMuted font-mono" id="netDesc">Pure-Python simulated PoW blockchain (difficulty: '000'). Instant & offline.</p>
       </div>
 
-      <!-- SECTION 3: MATCH TOLERANCE -->
+      <!-- SECTION 3: SEARCH ENGINE SELECTOR -->
+      <div class="flex flex-col gap-2">
+        <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">3. Search Engine</label>
+        <div class="grid grid-cols-3 gap-1 p-1 rounded bg-bg border border-border">
+          <button id="btnEngineYandex" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen" title="Industry standard for face search">
+            Yandex
+          </button>
+          <button id="btnEngineLens" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary" title="Google Lens visual search">
+            Lens
+          </button>
+          <button id="btnEngineHybrid" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary" title="Combines Yandex + Google Lens">
+            Hybrid
+          </button>
+        </div>
+        <p class="text-[10px] text-textMuted font-mono" id="engineDesc">Yandex Images: 300+ deep visual matches, #1 for human face identification.</p>
+      </div>
+
+      <!-- SECTION 4: SEARCH DEPTH -->
       <div class="flex flex-col gap-2">
         <div class="flex justify-between items-center">
-          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">3. Cosine Tolerance</label>
+          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">4. Search Depth</label>
+          <span id="depthVal" class="text-xs font-mono font-bold text-signalGreen">35 Candidates</span>
+        </div>
+        <input type="range" id="depthSlider" min="10" max="100" step="5" value="35" class="w-full accent-signalGreen cursor-pointer" />
+        <div class="flex justify-between text-[10px] font-mono text-textMuted">
+          <span>10 (Fast)</span>
+          <span>35 (Balanced)</span>
+          <span>100 (Deep)</span>
+        </div>
+      </div>
+
+      <!-- SECTION 5: MATCH TOLERANCE -->
+      <div class="flex flex-col gap-2">
+        <div class="flex justify-between items-center">
+          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">5. Cosine Tolerance</label>
           <span id="tolVal" class="text-xs font-mono font-bold text-signalGreen">0.35</span>
         </div>
         <input type="range" id="tolSlider" min="0.05" max="0.95" step="0.01" value="0.35" class="w-full accent-signalGreen cursor-pointer" />
@@ -643,6 +674,7 @@
     let selectedImageFile = null;
     let selectedSampleId = null;
     let activeNetwork = "local";
+    let activeEngine = "yandex";
     let isRunning = false;
     let lastRecordPayload = null;
 
@@ -661,6 +693,14 @@
     const btnNetAmoy = document.getElementById("btnNetAmoy");
     const netDesc = document.getElementById("netDesc");
     const topActiveChain = document.getElementById("topActiveChain");
+
+    const btnEngineYandex = document.getElementById("btnEngineYandex");
+    const btnEngineLens = document.getElementById("btnEngineLens");
+    const btnEngineHybrid = document.getElementById("btnEngineHybrid");
+    const engineDesc = document.getElementById("engineDesc");
+
+    const depthSlider = document.getElementById("depthSlider");
+    const depthVal = document.getElementById("depthVal");
 
     const tolSlider = document.getElementById("tolSlider");
     const tolVal = document.getElementById("tolVal");
@@ -793,6 +833,37 @@
       tolVal.textContent = parseFloat(e.target.value).toFixed(2);
       valTolerance.textContent = `< ${parseFloat(e.target.value).toFixed(2)}`;
     });
+
+    // Search Depth Slider
+    depthSlider.addEventListener("input", (e) => {
+      depthVal.textContent = `${e.target.value} Candidates`;
+    });
+
+    // Search Engine Switcher
+    function setEngine(engine) {
+      activeEngine = engine;
+      btnEngineYandex.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary";
+      btnEngineLens.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary";
+      btnEngineHybrid.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary";
+
+      if (engine === "yandex") {
+        btnEngineYandex.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen";
+        engineDesc.textContent = "Yandex Images: 300+ deep visual matches, #1 for human face identification.";
+        appendLog("[CONFIG] Search Engine set to YANDEX (Primary / Face-Optimized)");
+      } else if (engine === "google_lens") {
+        btnEngineLens.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen";
+        engineDesc.textContent = "Google Lens: Fast general visual search via SerpApi.";
+        appendLog("[CONFIG] Search Engine set to GOOGLE LENS");
+      } else if (engine === "hybrid") {
+        btnEngineHybrid.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen";
+        engineDesc.textContent = "Hybrid: Queries Yandex + Google Lens concurrently for maximum candidate discovery.";
+        appendLog("[CONFIG] Search Engine set to HYBRID (Yandex + Google Lens)");
+      }
+    }
+
+    btnEngineYandex.addEventListener("click", () => setEngine("yandex"));
+    btnEngineLens.addEventListener("click", () => setEngine("google_lens"));
+    btnEngineHybrid.addEventListener("click", () => setEngine("hybrid"));
 
     // Network Toggle
     btnNetLocal.addEventListener("click", () => {
@@ -947,6 +1018,8 @@
       }
       formData.append("network", activeNetwork);
       formData.append("tolerance", tolSlider.value);
+      formData.append("engine", activeEngine);
+      formData.append("max_candidates", depthSlider.value);
 
       try {
         // Stage 2 active after a brief moment

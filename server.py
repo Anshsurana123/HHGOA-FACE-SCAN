@@ -130,12 +130,14 @@ async def run_pipeline(
     sample_id: str = Form(None),
     network: str = Form("local"),
     tolerance: float = Form(0.35),
+    engine: str = Form("yandex"),
+    max_candidates: int = Form(35),
     offline_demo: bool = Form(False),
 ):
     """
     Executes the full pipeline:
     1. Face Detection & Embedding Extraction (InsightFace)
-    2. Real-time Reverse Search & Re-verification (SerpApi + ImgBB)
+    2. Real-time Reverse Search & Re-verification (Yandex / Google Lens / Hybrid via SerpApi + ImgBB)
     3. Blockchain Anchoring (Local PoW or Polygon Amoy)
     """
     logs: list[str] = []
@@ -143,7 +145,7 @@ async def run_pipeline(
         timestamp = time.strftime("%H:%M:%S")
         logs.append(f"[{timestamp}] {msg}")
 
-    log(f"INITIATING PIPELINE: network={network.upper()}, tolerance={tolerance:.2f}, offline={offline_demo}")
+    log(f"INITIATING PIPELINE: network={network.upper()}, engine={engine.upper()}, depth={max_candidates}, tolerance={tolerance:.2f}, offline={offline_demo}")
 
     # Step 0: Read image bytes
     image_bytes: bytes = b""
@@ -217,7 +219,7 @@ async def run_pipeline(
     # =========================================================================
     # STAGE 2: Reverse Search (Face Portrait) & Re-Verification
     # =========================================================================
-    log("--- STAGE 2: Facial Reverse Image Search & Face Re-Match ---")
+    log(f"--- STAGE 2: Facial Reverse Image Search ({engine.upper()}) & Re-Match ---")
     serpapi_key = os.getenv("SERPAPI_KEY")
     imgbb_key = os.getenv("IMGBB_KEY")
 
@@ -229,16 +231,17 @@ async def run_pipeline(
     try:
         matcher_result: MatcherResult = find_verified_social_post(
             input_embedding=embedding,
-            image_path_or_bytes=cropped_face_bytes,  # <-- Pass cropped face so search focuses on the face
+            image_path_or_bytes=cropped_face_bytes,
             tol=tolerance,
+            engine=engine,
             serpapi_key=serpapi_key,
             imgbb_key=imgbb_key,
-            max_candidates=25,
+            max_candidates=max_candidates,
             offline_demo=offline_demo,
         )
         elapsed_search = time.time() - start_search_t
-        log(f"Search executed in {elapsed_search:.2f}s.")
-        log(f"Google Lens matches: {matcher_result.total_lens_matches}, Social candidates: {matcher_result.total_social_candidates}")
+        log(f"Search executed in {elapsed_search:.2f}s via {matcher_result.search_engine}.")
+        log(f"Raw engine matches: {matcher_result.total_engine_matches}, Social candidates: {matcher_result.total_social_candidates}, Web: {matcher_result.total_web_candidates}")
 
         cand_dir = OUT_DIR / "candidates"
         cand_dir.mkdir(parents=True, exist_ok=True)

@@ -82,6 +82,8 @@ def test_offline_demo_matcher():
         input_embedding=dummy_embedding,
         image_path_or_bytes="tests/fixtures/person1_a.jpg",
         tol=0.35,
+        engine="yandex",
+        max_candidates=50,
         offline_demo=True,
     )
 
@@ -91,3 +93,10 @@ def test_offline_demo_matcher():
     assert "image_sha256" in result.accepted_record
     assert len(result.candidate_logs) == 1
     assert result.candidate_logs[0]["matched"] is True
+
+
+def test_yandex_client_error_handling():
+    """Validates Yandex client exception handling on missing key or failure."""
+    from search.yandex_client import search_yandex_images, YandexSearchError
+    with pytest.raises(YandexSearchError):
+        search_yandex_images("https://invalid.example.com/test.jpg", api_key="")

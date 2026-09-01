@@ -56,14 +56,18 @@ def cli():
 @click.option("--image", "-i", required=True, type=click.Path(exists=True), help="Path to input face scan image.")
 @click.option("--network", "-n", type=click.Choice(["local", "amoy"], case_sensitive=False), default="local", show_default=True, help="Blockchain network to anchor record.")
 @click.option("--tol", "-t", type=float, default=DEFAULT_TOLERANCE, show_default=True, help="Cosine distance tolerance threshold for face match.")
+@click.option("--engine", "-e", type=click.Choice(["yandex", "google_lens", "hybrid"], case_sensitive=False), default="yandex", show_default=True, help="Visual reverse search engine (Yandex is face-optimized primary).")
+@click.option("--max-candidates", "-m", type=int, default=35, show_default=True, help="Search depth (number of visual candidates to evaluate).")
 @click.option("--offline-demo", is_flag=True, default=False, help="Run search in offline demonstration mode without external API calls.")
 @click.option("--out-dir", "-o", default="out", show_default=True, help="Directory to save verified record and post image.")
-def run_cmd(image: str, network: str, tol: float, offline_demo: bool, out_dir: str):
+def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: int, offline_demo: bool, out_dir: str):
     """Run the complete pipeline end-to-end: Detect -> Search -> Match -> Anchor -> Save."""
     _print_banner()
     click.secho(f"[*] Starting Pipeline Execution", fg="yellow", bold=True)
     click.secho(f"    - Input image: {image}")
     click.secho(f"    - Target network: {network.upper()}")
+    click.secho(f"    - Search Engine: {engine.upper()}")
+    click.secho(f"    - Search Depth: {max_candidates} candidates")
     click.secho(f"    - Cosine distance tolerance: {tol}")
     click.secho(f"    - Offline demo mode: {offline_demo}\n")
 
@@ -97,19 +101,23 @@ def run_cmd(image: str, network: str, tol: float, offline_demo: bool, out_dir: s
     # =========================================================================
     # STAGE 2: Genuine Web/Social Reverse Search & Verification
     # =========================================================================
-    click.secho("\n--- STAGE 2: Genuine Social Media Search & Face Re-Match ---", fg="blue", bold=True)
+    click.secho(f"\n--- STAGE 2: Genuine Social Media Search ({engine.upper()}) & Face Re-Match ---", fg="blue", bold=True)
     try:
         match_result = find_verified_social_post(
             input_embedding=embedding,
             image_path_or_bytes=cropped_face_bytes,
             tol=tol,
+            engine=engine,
+            max_candidates=max_candidates,
             offline_demo=offline_demo,
         )
 
         if match_result.imgbb_url:
             click.echo(f" [*] Uploaded scan to ImgBB: {match_result.imgbb_url}")
-        click.echo(f" [*] Google Lens matches found: {match_result.total_lens_matches}")
+        click.echo(f" [*] Search engine used: {match_result.search_engine}")
+        click.echo(f" [*] Raw matches found: {match_result.total_engine_matches}")
         click.echo(f" [*] Filtered social candidates: {match_result.total_social_candidates}")
+        click.echo(f" [*] Filtered web candidates: {match_result.total_web_candidates}")
 
         click.secho("\n Candidate Evaluation Logs:", bold=True)
         for cand in match_result.candidate_logs:
@@ -226,12 +234,16 @@ def run_cmd(image: str, network: str, tol: float, offline_demo: bool, out_dir: s
 @cli.command("search")
 @click.option("--image", "-i", required=True, type=click.Path(exists=True), help="Path to input face scan image.")
 @click.option("--tol", "-t", type=float, default=DEFAULT_TOLERANCE, show_default=True, help="Cosine distance tolerance threshold.")
+@click.option("--engine", "-e", type=click.Choice(["yandex", "google_lens", "hybrid"], case_sensitive=False), default="yandex", show_default=True, help="Visual reverse search engine (Yandex primary).")
+@click.option("--max-candidates", "-m", type=int, default=35, show_default=True, help="Search depth (number of visual candidates to evaluate).")
 @click.option("--offline-demo", is_flag=True, default=False, help="Run search in offline demonstration mode.")
-def search_cmd(image: str, tol: float, offline_demo: bool):
+def search_cmd(image: str, tol: float, engine: str, max_candidates: int, offline_demo: bool):
     """Execute Stages 1 & 2 only: Detect face, search social platforms, and print match evaluation."""
     _print_banner()
     click.secho(f"[*] Running Face Search Mode (Stages 1 & 2)", fg="yellow", bold=True)
     click.echo(f"    - Input image: {image}")
+    click.echo(f"    - Search engine: {engine.upper()}")
+    click.echo(f"    - Search depth: {max_candidates} candidates")
     click.echo(f"    - Tolerance: {tol}\n")
 
     try:
@@ -246,11 +258,15 @@ def search_cmd(image: str, tol: float, offline_demo: bool):
             input_embedding=embedding,
             image_path_or_bytes=cropped_face_bytes,
             tol=tol,
+            engine=engine,
+            max_candidates=max_candidates,
             offline_demo=offline_demo,
         )
 
-        click.echo(f" [*] Google Lens matches: {match_result.total_lens_matches}")
-        click.echo(f" [*] Social candidates: {match_result.total_social_candidates}")
+        click.echo(f" [*] Search engine used: {match_result.search_engine}")
+        click.echo(f" [*] Raw matches found: {match_result.total_engine_matches}")
+        click.echo(f" [*] Filtered social candidates: {match_result.total_social_candidates}")
+        click.echo(f" [*] Filtered web candidates: {match_result.total_web_candidates}")
 
         click.secho("\n Candidate Evaluation:", bold=True)
         for cand in match_result.candidate_logs:

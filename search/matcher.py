@@ -1,20 +1,11 @@
 """Search and face match orchestrator for social media posts.
 
-v2: fixes two failure modes observed in practice:
-  1. "Circular verification" - when a candidate page has no extractable og:image,
-     the old code fell back to Google Lens's own thumbnail for the face-check.
-     Since Lens picked that thumbnail *because* its whole-image similarity engine
-     thought it looked like the input, checking against it just re-confirms
-     Lens's own ranking bias rather than independently verifying anything.
-     Fix: thumbnail-fallback matches are now tagged and demoted to lowest priority.
-  2. "Popularity/near-duplicate bias" - Lens ranks by whole-image similarity and
-     page authority, not by face identity, so a popular lookalike (or a mirrored
-     repost of the exact input image) can outrank the real, correct post. The old
-     code also hard-filtered to 9 social domains and stopped at the first pass
-     within only 5-6 evaluated candidates.
-     Fix: evaluate the full candidate pool (social + general web, no early return),
-     flag near-duplicates of the input via perceptual hashing, and select the best
-     (lowest distance) match from the strongest available evidence tier.
+Supports:
+  - Yandex Images (Primary / Default for deep facial identification)
+  - Google Lens (Secondary / Fallback)
+  - Hybrid Multi-Engine (Combines Yandex + Google Lens)
+  - Tiered evidence strength with perceptual aHash near-duplicate detection
+  - Full candidate pool evaluation with configurable search depth
 """
 
 from __future__ import annotations
@@ -34,6 +25,7 @@ from faceid.encoder import (
 )
 from search.imgbb_client import upload_to_imgbb
 from search.lens_client import search_google_lens
+from search.yandex_client import search_yandex_images
 from search.post_extractor import (
     fetch_post,
     is_social_media_url,
@@ -43,18 +35,17 @@ from search.post_extractor import (
 )
 
 
-# Evidence-strength tiers, best first. Used to rank passing candidates when more
-# than one clears the face-match threshold.
-TIER_PAGE_IMAGE_UNIQUE = 0       # downloaded from the real post/page, not a dup of the input
-TIER_PAGE_IMAGE_DUPLICATE = 1    # downloaded from the real post/page, but same photo as input
-TIER_THUMBNAIL_UNIQUE = 2        # only Lens's own thumbnail was available, not a dup of the input
-TIER_THUMBNAIL_DUPLICATE = 3     # only Lens's own thumbnail, and it's a dup of the input
+# Evidence-strength tiers, best first.
+TIER_PAGE_IMAGE_UNIQUE = 0       # downloaded from real post/page, distinct photo
+TIER_PAGE_IMAGE_DUPLICATE = 1    # downloaded from real post/page, but duplicate of input
+TIER_THUMBNAIL_UNIQUE = 2        # only engine thumbnail was available, distinct photo
+TIER_THUMBNAIL_DUPLICATE = 3     # only engine thumbnail, and duplicate of input
 
 TIER_LABELS = {
     TIER_PAGE_IMAGE_UNIQUE: "page image, distinct photo",
     TIER_PAGE_IMAGE_DUPLICATE: "page image, duplicate of input",
-    TIER_THUMBNAIL_UNIQUE: "Lens thumbnail only (unverified against source page), distinct photo",
-    TIER_THUMBNAIL_DUPLICATE: "Lens thumbnail only (unverified against source page), duplicate of input",
+    TIER_THUMBNAIL_UNIQUE: "Engine thumbnail only (unverified against source page), distinct photo",
+    TIER_THUMBNAIL_DUPLICATE: "Engine thumbnail only (unverified against source page), duplicate of input",
 }
 
 
@@ -99,8 +90,6 @@ def _hamming(a: int | None, b: int | None) -> int | None:
     return bin(a ^ b).count("1")
 
 
-# Out of 64 bits (8x8 aHash); <=6 bits differing (~90%+ similar) is treated as
-# "same photo, different hosting/compression" rather than a genuinely new image.
 NEAR_DUPLICATE_HAMMING_THRESHOLD = 6
 
 
@@ -112,7 +101,8 @@ class MatcherResult:
         accepted_record: dict[str, Any] | None,
         candidate_logs: list[dict[str, Any]],
         imgbb_url: str | None = None,
-        total_lens_matches: int = 0,
+        search_engine: str = "yandex",
+        total_engine_matches: int = 0,
         total_social_candidates: int = 0,
         total_web_candidates: int = 0,
         accepted_distance: float | None = None,
@@ -122,7 +112,9 @@ class MatcherResult:
         self.accepted_record = accepted_record
         self.candidate_logs = candidate_logs
         self.imgbb_url = imgbb_url
-        self.total_lens_matches = total_lens_matches
+        self.search_engine = search_engine
+        self.total_engine_matches = total_engine_matches
+        self.total_lens_matches = total_engine_matches  # Backward compatibility alias
         self.total_social_candidates = total_social_candidates
         self.total_web_candidates = total_web_candidates
         self.accepted_distance = accepted_distance
@@ -168,15 +160,25 @@ def _evaluate_candidate(
         img_bytes = post_data.get("_image_bytes")
         verification_source = "page_image" if img_bytes else None
 
-        # Fallback to Lens's own thumbnail ONLY if the real page image is unavailable.
-        # This is weaker evidence (see module docstring) and is tagged as such.
+        # 1. Try downloading direct original page image if provided by search engine (e.g. Yandex)
+        if not img_bytes and candidate.get("original_image"):
+            try:
+                orig_resp = _http_get(candidate["original_image"], timeout=10)
+                if orig_resp.status_code == 200 and len(orig_resp.content) > 0:
+                    img_bytes = orig_resp.content
+                    post_data["_image_bytes"] = img_bytes
+                    verification_source = "page_image"
+            except Exception:
+                pass
+
+        # 2. Fallback to search engine thumbnail ONLY if real page image is unavailable
         if not img_bytes and candidate.get("thumbnail"):
             try:
                 thumb_resp = _http_get(candidate["thumbnail"], timeout=10)
                 if thumb_resp.status_code == 200 and len(thumb_resp.content) > 0:
                     img_bytes = thumb_resp.content
                     post_data["_image_bytes"] = img_bytes
-                    verification_source = "lens_thumbnail_fallback"
+                    verification_source = "thumbnail_fallback"
             except Exception:
                 pass
 
@@ -215,7 +217,7 @@ def _evaluate_candidate(
         if dist < tol:
             log["matched"] = True
             dup_note = " [near-duplicate of input photo]" if is_dup else " [distinct photo]"
-            src_note = " (verified from source page)" if verification_source == "page_image" else " (WARNING: only Lens's own thumbnail, not independently confirmed)"
+            src_note = " (verified from source page)" if verification_source == "page_image" else " (WARNING: engine thumbnail fallback)"
             log["status"] = f"MATCH (cosine distance {dist:.4f} < {tol}){src_note}{dup_note}"
         else:
             log["status"] = f"REJECTED: cosine distance {dist:.4f} >= {tol} (different person)."
@@ -227,13 +229,53 @@ def _evaluate_candidate(
         return log
 
 
+def _fetch_engine_results(
+    engine: str,
+    imgbb_url: str,
+    serpapi_key: str | None,
+) -> tuple[list[dict[str, Any]], str]:
+    """Fetches candidates from Yandex, Google Lens, or Hybrid combination."""
+    if engine.lower() == "google_lens":
+        results = search_google_lens(imgbb_url, api_key=serpapi_key)
+        return results, "Google Lens"
+    elif engine.lower() == "hybrid":
+        # Query Yandex first, supplement with Google Lens
+        y_results = []
+        try:
+            y_results = search_yandex_images(imgbb_url, api_key=serpapi_key)
+        except Exception:
+            pass
+
+        l_results = []
+        try:
+            l_results = search_google_lens(imgbb_url, api_key=serpapi_key)
+        except Exception:
+            pass
+
+        merged = y_results + [r for r in l_results if not any(y["link"] == r["link"] for y in y_results)]
+        return merged, f"Hybrid (Yandex {len(y_results)} + Lens {len(l_results)})"
+    else:
+        # Default: Yandex Images (Gold standard for human face reverse search)
+        try:
+            results = search_yandex_images(imgbb_url, api_key=serpapi_key)
+            if results:
+                return results, "Yandex Images"
+        except Exception:
+            pass
+
+        # Automatic fallback to Google Lens if Yandex raises or returns empty
+        results = search_google_lens(imgbb_url, api_key=serpapi_key)
+        return results, "Google Lens (Yandex Fallback)"
+
+
 def find_verified_social_post(
     input_embedding: np.ndarray,
     image_path_or_bytes: str | bytes,
     tol: float = 0.35,
+    engine: str = "yandex",
     serpapi_key: str | None = None,
     imgbb_key: str | None = None,
-    max_candidates: int = 25,
+    max_candidates: int = 35,
     include_general_web: bool = True,
     offline_demo: bool = False,
     offline_post_url: str | None = None,
@@ -241,15 +283,10 @@ def find_verified_social_post(
     """
     Executes Stage 2:
     1. Upload scan (face crop) to ImgBB -> public URL
-    2. Query Google Lens via SerpApi
+    2. Query Visual Search Engine (Yandex Images primary / Google Lens / Hybrid)
     3. Rank candidates: social-platform matches first, then general web matches
-       (previously general-web results were discarded entirely)
-    4. Evaluate the FULL candidate pool (up to max_candidates), not just the
-       first few in Lens's own rank order - popularity/duplicate-driven ranking
-       is not the same as face-identity ranking.
-    5. Among all candidates that pass the face-match threshold, select the one
-       with the strongest evidence tier (real page image > thumbnail-only;
-       distinct photo > duplicate of input), breaking ties by lowest distance.
+    4. Evaluate candidate pool up to max_candidates (configurable search depth)
+    5. Select the passing candidate with the strongest evidence tier and lowest cosine distance
     """
     candidate_logs: list[dict[str, Any]] = []
 
@@ -272,8 +309,8 @@ def find_verified_social_post(
         })
         return MatcherResult(
             accepted_record=post_data, candidate_logs=candidate_logs,
-            imgbb_url="https://i.ibb.co/demo/scan.jpg", total_lens_matches=1,
-            total_social_candidates=1, total_web_candidates=0,
+            imgbb_url="https://i.ibb.co/demo/scan.jpg", search_engine="offline_demo",
+            total_engine_matches=1, total_social_candidates=1, total_web_candidates=0,
             accepted_distance=0.12, accepted_tier=TIER_PAGE_IMAGE_UNIQUE,
             reason="Matched via offline demo mode.",
         )
@@ -282,14 +319,15 @@ def find_verified_social_post(
     input_ahash = _average_hash(input_bytes)
 
     imgbb_url = upload_to_imgbb(image_path_or_bytes, api_key=imgbb_key)
-    lens_results = search_google_lens(imgbb_url, api_key=serpapi_key)
-    total_lens_matches = len(lens_results)
+    raw_results, active_engine_label = _fetch_engine_results(engine, imgbb_url, serpapi_key)
+    total_engine_matches = len(raw_results)
 
-    if not lens_results:
+    if not raw_results:
         return MatcherResult(
             accepted_record=None, candidate_logs=candidate_logs, imgbb_url=imgbb_url,
-            total_lens_matches=0, total_social_candidates=0, total_web_candidates=0,
-            reason="No visual matches returned by Google Lens for this image.",
+            search_engine=active_engine_label,
+            total_engine_matches=0, total_social_candidates=0, total_web_candidates=0,
+            reason=f"No visual matches returned by {active_engine_label} for this image.",
         )
 
     # Tier 1: social-platform candidates. Tier 2: everything else on the open web.
@@ -297,7 +335,7 @@ def find_verified_social_post(
     web_candidates: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
 
-    for item in lens_results:
+    for item in raw_results:
         link = item.get("link", "")
         if not link:
             continue
@@ -317,9 +355,10 @@ def find_verified_social_post(
     if not ordered_candidates:
         return MatcherResult(
             accepted_record=None, candidate_logs=candidate_logs, imgbb_url=imgbb_url,
-            total_lens_matches=total_lens_matches, total_social_candidates=0,
+            search_engine=active_engine_label,
+            total_engine_matches=total_engine_matches, total_social_candidates=0,
             total_web_candidates=0,
-            reason="Google Lens returned matches, but none were usable as web/social candidates.",
+            reason=f"{active_engine_label} returned matches, but none were usable as web/social candidates.",
         )
 
     candidates_to_eval = ordered_candidates[:max_candidates]
@@ -334,10 +373,11 @@ def find_verified_social_post(
     if not passing:
         return MatcherResult(
             accepted_record=None, candidate_logs=candidate_logs, imgbb_url=imgbb_url,
-            total_lens_matches=total_lens_matches,
+            search_engine=active_engine_label,
+            total_engine_matches=total_engine_matches,
             total_social_candidates=total_social_candidates,
             total_web_candidates=total_web_candidates,
-            reason=f"Evaluated {len(candidates_to_eval)} candidate(s) across social+web, "
+            reason=f"Evaluated {len(candidates_to_eval)} candidate(s) via {active_engine_label}, "
                    f"none satisfied the face match tolerance (tol={tol}).",
         )
 
@@ -345,8 +385,7 @@ def find_verified_social_post(
     passing.sort(key=lambda l: (l["tier"], l["distance"]))
     best = passing[0]
 
-    # Reconstruct the accepted post record by re-fetching (cheap, guarantees
-    # the record we anchor matches what fetch_post would return at verify time).
+    # Reconstruct the accepted post record by re-fetching
     accepted_post = fetch_post(best["url"])
     if not accepted_post.get("_image_bytes") and best.get("_image_bytes"):
         accepted_post["_image_bytes"] = best["_image_bytes"]
@@ -355,11 +394,12 @@ def find_verified_social_post(
         accepted_record=accepted_post,
         candidate_logs=candidate_logs,
         imgbb_url=imgbb_url,
-        total_lens_matches=total_lens_matches,
+        search_engine=active_engine_label,
+        total_engine_matches=total_engine_matches,
         total_social_candidates=total_social_candidates,
         total_web_candidates=total_web_candidates,
         accepted_distance=best["distance"],
         accepted_tier=best["tier"],
-        reason=f"Best match: {best['url']} (distance {best['distance']:.4f}, "
+        reason=f"Best match via {active_engine_label}: {best['url']} (distance {best['distance']:.4f}, "
                f"evidence tier: {TIER_LABELS[best['tier']]}).",
     )
