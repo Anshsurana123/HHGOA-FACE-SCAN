@@ -493,18 +493,25 @@ def find_verified_social_post(
     passing.sort(key=lambda l: (l["tier"], l["distance"]))
     best = passing[0]
 
-    # Reconstruct the accepted post record
+    # Reconstruct the accepted post record with full canonical metadata parity
+    try:
+        enriched = fetch_post(best["url"])
+    except Exception:
+        enriched = {}
+
     accepted_post = {
         "platform": best.get("platform", "web"),
         "post_url": best["url"],
-        "author": best.get("author") or best.get("title", ""),
-        "text": best.get("text") or best.get("title", ""),
-        "posted_at": "",
-        "_image_bytes": best.get("_image_bytes"),
+        "author": enriched.get("author") or best.get("author") or best.get("title", ""),
+        "text": enriched.get("text") or best.get("text") or best.get("title", ""),
+        "posted_at": enriched.get("posted_at", ""),
+        "_image_bytes": enriched.get("_image_bytes") or best.get("_image_bytes"),
     }
-    if best.get("_image_bytes"):
+    if enriched.get("image_sha256"):
+        accepted_post["image_sha256"] = enriched["image_sha256"]
+    elif accepted_post.get("_image_bytes"):
         import hashlib
-        accepted_post["image_sha256"] = hashlib.sha256(best["_image_bytes"]).hexdigest()
+        accepted_post["image_sha256"] = hashlib.sha256(accepted_post["_image_bytes"]).hexdigest()
 
     return MatcherResult(
         accepted_record=accepted_post,
