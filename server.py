@@ -127,6 +127,7 @@ async def get_chain_status(network: str = Query("local", enum=["local", "amoy"])
 @app.post("/api/run")
 async def run_pipeline(
     image: UploadFile = File(None),
+    full_image: UploadFile = File(None),
     sample_id: str = Form(None),
     network: str = Form("local"),
     tolerance: float = Form(0.35),
@@ -152,6 +153,7 @@ async def run_pipeline(
 
     # Step 0: Read image bytes
     image_bytes: bytes = b""
+    full_search_bytes: bytes = b""
     image_filename = "scan.jpg"
 
     if image and image.filename:
@@ -175,10 +177,17 @@ async def run_pipeline(
             content={"success": False, "error": "No image file or sample provided.", "logs": logs},
         )
 
+    # Read original full image if provided alongside manual crop
+    if full_image and full_image.filename:
+        full_search_bytes = await full_image.read()
+        log(f"Preserved full context photo for dual-perspective search ({len(full_search_bytes)} bytes)")
+    else:
+        full_search_bytes = image_bytes
+
     # Save scan to out/last_scan.jpg
     last_scan_path = OUT_DIR / "last_scan.jpg"
     with open(last_scan_path, "wb") as f:
-        f.write(image_bytes)
+        f.write(full_search_bytes if full_search_bytes else image_bytes)
 
     # =========================================================================
     # STAGE 1: Face Detection & Focused Facial Extraction
@@ -187,7 +196,7 @@ async def run_pipeline(
     start_t = time.time()
     try:
         if manual_crop:
-            # User manually framed the face — skip secondary auto-crop to prevent altering user selection
+            # User manually framed the face — compute embedding directly on this crop without altering bounds
             cropped_face_bytes = image_bytes
             embedding, face_meta = encode_face_with_meta(image_bytes)
             elapsed_face = time.time() - start_t
@@ -254,7 +263,7 @@ async def run_pipeline(
     try:
         matcher_result: MatcherResult = find_verified_social_post(
             input_embedding=embedding,
-            image_path_or_bytes=image_bytes,
+            image_path_or_bytes=full_search_bytes,
             cropped_face_bytes=cropped_face_bytes,
             tol=tolerance,
             engine=engine,
