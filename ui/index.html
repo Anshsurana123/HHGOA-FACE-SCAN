@@ -105,16 +105,6 @@
       );
     }
 
-    /* Collapsible Side Panel Animation */
-    #sidePanel {
-      transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-in-out;
-    }
-    #sidePanel.collapsed {
-      margin-left: -20rem; /* -320px */
-      opacity: 0;
-      pointer-events: none;
-    }
-
     /* Cropper.js Dark Console Custom Theme */
     .cropper-view-box {
       outline: 2px solid #2BD576 !important;
@@ -138,15 +128,8 @@
   <!-- TOP APP HEADER -->
   <header class="h-14 border-b border-border bg-surface flex items-center justify-between px-6 shrink-0 z-20">
     <div class="flex items-center gap-3">
-      <!-- SIDEBAR TOGGLE BUTTON -->
-      <button id="btnToggleSidebar" class="p-1.5 rounded border border-border bg-surfaceElevated hover:border-signalGreen text-textSecondary hover:text-signalGreen transition-colors cursor-pointer flex items-center justify-center" title="Toggle Side Panel (Hide / Show)">
-        <svg id="iconSidebarToggle" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
-        </svg>
-      </button>
-
-      <div class="w-7 h-7 rounded border border-signalGreen/40 bg-signalGreen/10 flex items-center justify-center">
-        <svg class="w-4 h-4 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="w-8 h-8 rounded border border-signalGreen/40 bg-signalGreen/10 flex items-center justify-center">
+        <svg class="w-4.5 h-4.5 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
         </svg>
       </div>
@@ -179,113 +162,13 @@
   <!-- WORKSPACE BODY -->
   <div class="flex-1 flex overflow-hidden">
 
-    <!-- LEFT SIDEBAR: CONTROL & SCAN INPUT (~320px) -->
-    <aside id="sidePanel" class="w-80 border-r border-border bg-surface flex flex-col shrink-0 overflow-y-auto p-5 gap-5 z-10">
-
-      <!-- SIDEBAR HEADER WITH HIDE BUTTON -->
-      <div class="flex items-center justify-between pb-2 border-b border-border text-xs font-mono">
-        <span class="text-textMuted font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
-          <svg class="w-3.5 h-3.5 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
-          Controls & Scan
-        </span>
-        <button id="btnHideSidebar" class="px-2 py-0.5 rounded border border-border hover:border-signalGreen bg-surfaceElevated hover:text-signalGreen text-textMuted transition-colors flex items-center gap-1 text-[10px] cursor-pointer" title="Hide Side Panel">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
-          <span>Hide</span>
-        </button>
-      </div>
-
-      <!-- SECTION 1: TARGET BLOCKCHAIN -->
-      <div class="flex flex-col gap-2">
-        <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">1. Blockchain Network</label>
-        <div class="grid grid-cols-2 gap-2 p-1 rounded bg-bg border border-border">
-          <button id="btnNetLocal" class="py-1.5 px-2 rounded text-xs font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen">
-            Local PoW
-          </button>
-          <button id="btnNetAmoy" class="py-1.5 px-2 rounded text-xs font-mono font-medium transition-colors text-textMuted hover:text-textPrimary">
-            Polygon Amoy
-          </button>
-        </div>
-        <p class="text-[11px] text-textMuted font-mono" id="netDesc">Pure-Python simulated PoW blockchain (difficulty: '000'). Instant & offline.</p>
-      </div>
-
-      <!-- SECTION 2: SEARCH ENGINE SELECTOR -->
-      <div class="flex flex-col gap-2">
-        <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">2. Search Engine</label>
-        <div class="grid grid-cols-3 gap-1 p-1 rounded bg-bg border border-border">
-          <button id="btnEngineLens" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen" title="Google Lens Dual-Perspective visual search">
-            Lens
-          </button>
-          <button id="btnEngineYandex" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary" title="Yandex Images visual search">
-            Yandex
-          </button>
-          <button id="btnEngineHybrid" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary" title="Combines Google Lens + Yandex">
-            Hybrid
-          </button>
-        </div>
-        <p class="text-[10px] text-textMuted font-mono" id="engineDesc">Google Lens: Dual-Perspective (Full Context + Cropped Face) #1 for LinkedIn & X profiles.</p>
-      </div>
-
-      <!-- SECTION 3: SEARCH DEPTH -->
-      <div class="flex flex-col gap-2">
-        <div class="flex justify-between items-center">
-          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">3. Search Depth</label>
-          <span id="depthVal" class="text-xs font-mono font-bold text-signalGreen">35 Candidates</span>
-        </div>
-        <input type="range" id="depthSlider" min="10" max="350" step="10" value="35" class="w-full accent-signalGreen cursor-pointer" />
-        <div class="flex justify-between text-[10px] font-mono text-textMuted">
-          <span>10 (Fast)</span>
-          <span>150 (Deep)</span>
-          <span>350 (Full Engine Pool)</span>
-        </div>
-        <button id="btnTillSuccess" type="button" class="w-full py-1.5 px-2 rounded border border-border bg-surfaceElevated hover:border-signalGreen text-xs font-mono text-textMuted hover:text-signalGreen transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-          <span>⚡</span>
-          <span id="txtTillSuccess">TILL SUCCESS (Search Until Found)</span>
-        </button>
-      </div>
-
-      <!-- SECTION 4: MATCH TOLERANCE -->
-      <div class="flex flex-col gap-2">
-        <div class="flex justify-between items-center">
-          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">4. Cosine Tolerance</label>
-          <span id="tolVal" class="text-xs font-mono font-bold text-signalGreen">0.35</span>
-        </div>
-        <input type="range" id="tolSlider" min="0.05" max="0.95" step="0.01" value="0.35" class="w-full accent-signalGreen cursor-pointer" />
-        <div class="flex justify-between text-[10px] font-mono text-textMuted">
-          <span>0.05 (Strict)</span>
-          <span>0.35 (Standard)</span>
-          <span>0.95 (Loose)</span>
-        </div>
-      </div>
-
-      <!-- PRIMARY ACTION BUTTON -->
-      <div class="mt-auto pt-2 flex flex-col gap-2">
-        <button id="btnRunScan" class="w-full py-3 px-4 rounded bg-signalGreen hover:bg-signalGreen/90 active:scale-[0.99] text-bg font-bold tracking-wider uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-none cursor-pointer">
-          <svg id="scanBtnIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <span id="scanBtnText">Scan & Find Matches</span>
-        </button>
-
-        <div class="flex items-center justify-between text-[10px] font-mono text-textMuted px-1">
-          <span>STATUS: IDLE</span>
-          <span>LATENCY: ~1.2s</span>
-        </div>
-      </div>
-    </aside>
-
-    <!-- MAIN RIGHT VIEWPORT: DASHBOARD & WORKSPACE -->
+    <!-- MAIN DASHBOARD & WORKSPACE (FULL WIDTH) -->
     <main class="flex-1 flex flex-col overflow-hidden relative">
 
       <!-- PIPELINE 3-STEP TRACKER BAR -->
       <div class="h-14 border-b border-border bg-surface flex items-center justify-between px-6 shrink-0">
-        <div class="flex items-center gap-6 w-full max-w-4xl">
+        <div class="flex items-center gap-6 w-full max-w-5xl mx-auto">
           
-          <!-- SHOW SIDEBAR BUTTON (Visible only when sidebar is collapsed) -->
-          <button id="btnShowSidebar" class="hidden shrink-0 px-2.5 py-1.5 rounded border border-signalGreen/40 bg-surfaceElevated hover:bg-signalGreen hover:text-bg text-signalGreen font-mono text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm" title="Show Side Panel">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
-            <span>Show Panel</span>
-          </button>
-
           <!-- STEP 1 -->
           <div id="trackerStep1" class="flex items-center gap-3 text-textMuted font-mono text-xs">
             <div class="step-num w-6 h-6 rounded border border-border bg-surfaceElevated flex items-center justify-center font-bold">1</div>
@@ -392,6 +275,107 @@
               </button>
             </div>
           </div>
+        </div>
+
+        <!-- HORIZONTAL CONFIGURATION CONTROLS (4 CARDS) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+
+          <!-- CARD 1: BLOCKCHAIN NETWORK -->
+          <div class="p-4 rounded-lg bg-surface border border-border flex flex-col justify-between gap-3 shadow-sm">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                1. Blockchain
+              </label>
+              <span class="text-[10px] font-mono text-textMuted px-1.5 py-0.5 rounded bg-surfaceElevated border border-border">ANCHOR</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 p-1 rounded bg-bg border border-border">
+              <button id="btnNetLocal" type="button" class="py-1.5 px-2 rounded text-xs font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen cursor-pointer">
+                Local PoW
+              </button>
+              <button id="btnNetAmoy" type="button" class="py-1.5 px-2 rounded text-xs font-mono font-medium transition-colors text-textMuted hover:text-textPrimary cursor-pointer">
+                Polygon Amoy
+              </button>
+            </div>
+            <p class="text-[11px] text-textMuted font-mono leading-tight" id="netDesc">Pure-Python simulated PoW blockchain (difficulty: '000'). Instant & offline.</p>
+          </div>
+
+          <!-- CARD 2: SEARCH ENGINE -->
+          <div class="p-4 rounded-lg bg-surface border border-border flex flex-col justify-between gap-3 shadow-sm">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                2. Search Engine
+              </label>
+              <span class="text-[10px] font-mono text-textMuted px-1.5 py-0.5 rounded bg-surfaceElevated border border-border">DISCOVERY</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1 p-1 rounded bg-bg border border-border">
+              <button id="btnEngineLens" type="button" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen cursor-pointer" title="Google Lens Dual-Perspective visual search">
+                Lens
+              </button>
+              <button id="btnEngineYandex" type="button" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary cursor-pointer" title="Yandex Images visual search">
+                Yandex
+              </button>
+              <button id="btnEngineHybrid" type="button" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary cursor-pointer" title="Combines Google Lens + Yandex">
+                Hybrid
+              </button>
+            </div>
+            <p class="text-[11px] text-textMuted font-mono leading-tight" id="engineDesc">Google Lens: Dual-Perspective (Full Context + Cropped Face) #1 for LinkedIn & X profiles.</p>
+          </div>
+
+          <!-- CARD 3: SEARCH DEPTH -->
+          <div class="p-4 rounded-lg bg-surface border border-border flex flex-col justify-between gap-3 shadow-sm">
+            <div class="flex justify-between items-center">
+              <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                3. Search Depth
+              </label>
+              <span id="depthVal" class="text-xs font-mono font-bold text-signalGreen">35 Candidates</span>
+            </div>
+            <div class="flex flex-col gap-1">
+              <input type="range" id="depthSlider" min="10" max="350" step="10" value="35" class="w-full accent-signalGreen cursor-pointer" />
+              <div class="flex justify-between text-[10px] font-mono text-textMuted">
+                <span>10 (Fast)</span>
+                <span>150 (Deep)</span>
+                <span>350 (Max)</span>
+              </div>
+            </div>
+            <button id="btnTillSuccess" type="button" class="w-full py-1.5 px-2 rounded border border-border bg-surfaceElevated hover:border-signalGreen text-xs font-mono text-textMuted hover:text-signalGreen transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+              <span>⚡</span>
+              <span id="txtTillSuccess">TILL SUCCESS (Search Until Found)</span>
+            </button>
+          </div>
+
+          <!-- CARD 4: MATCH TOLERANCE -->
+          <div class="p-4 rounded-lg bg-surface border border-border flex flex-col justify-between gap-3 shadow-sm">
+            <div class="flex justify-between items-center">
+              <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                4. Cosine Tolerance
+              </label>
+              <span id="tolVal" class="text-xs font-mono font-bold text-signalGreen">0.35</span>
+            </div>
+            <div class="flex flex-col gap-1">
+              <input type="range" id="tolSlider" min="0.05" max="0.95" step="0.01" value="0.35" class="w-full accent-signalGreen cursor-pointer" />
+              <div class="flex justify-between text-[10px] font-mono text-textMuted">
+                <span>0.05 (Strict)</span>
+                <span>0.35 (Standard)</span>
+                <span>0.95 (Loose)</span>
+              </div>
+            </div>
+            <p class="text-[11px] text-textMuted font-mono leading-tight">ArcFace distance cutoff: pairs &lt; threshold are classified verified matches.</p>
+          </div>
+
+        </div>
+
+        <!-- BIG SCAN & FIND MATCH ACTION BUTTON -->
+        <div class="w-full">
+          <button id="btnRunScan" type="button" class="w-full py-4 px-6 rounded-lg bg-signalGreen hover:bg-signalGreen/90 active:scale-[0.995] text-bg font-bold tracking-wider uppercase text-sm font-mono transition-all flex items-center justify-center gap-3 shadow-lg shadow-signalGreen/10 cursor-pointer">
+            <svg id="scanBtnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span id="scanBtnText" class="text-sm font-bold tracking-widest">SCAN & FIND MATCHES ON WEB & BLOCKCHAIN</span>
+          </button>
         </div>
 
         <!-- Banner: Verification Passed (Hidden by default) -->
@@ -1201,43 +1185,6 @@
     const logCount = document.getElementById("logCount");
     const btnToggleLog = document.getElementById("btnToggleLog");
     const logChevron = document.getElementById("logChevron");
-
-    // Sidebar Collapse / Expand Elements & Logic
-    const sidePanel = document.getElementById("sidePanel");
-    const btnToggleSidebar = document.getElementById("btnToggleSidebar");
-    const btnHideSidebar = document.getElementById("btnHideSidebar");
-    const btnShowSidebar = document.getElementById("btnShowSidebar");
-
-    function setSidebarCollapsed(collapsed) {
-      if (collapsed) {
-        sidePanel.classList.add("collapsed");
-        btnShowSidebar.classList.remove("hidden");
-        btnToggleSidebar.classList.add("text-signalGreen", "border-signalGreen");
-        btnToggleSidebar.title = "Show Side Panel";
-      } else {
-        sidePanel.classList.remove("collapsed");
-        btnShowSidebar.classList.add("hidden");
-        btnToggleSidebar.classList.remove("text-signalGreen", "border-signalGreen");
-        btnToggleSidebar.title = "Hide Side Panel";
-      }
-    }
-
-    function toggleSidebar() {
-      const isCollapsed = sidePanel.classList.contains("collapsed");
-      setSidebarCollapsed(!isCollapsed);
-    }
-
-    if (btnToggleSidebar) btnToggleSidebar.addEventListener("click", toggleSidebar);
-    if (btnHideSidebar) btnHideSidebar.addEventListener("click", () => setSidebarCollapsed(true));
-    if (btnShowSidebar) btnShowSidebar.addEventListener("click", () => setSidebarCollapsed(false));
-
-    // Keyboard shortcut: Ctrl+B / Cmd+B to toggle sidebar
-    window.addEventListener("keydown", (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
-        e.preventDefault();
-        toggleSidebar();
-      }
-    });
 
     // Logger
     function appendLog(msg, colorClass = "text-textSecondary") {
