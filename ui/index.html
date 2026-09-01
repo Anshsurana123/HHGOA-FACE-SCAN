@@ -473,19 +473,24 @@
 
               <!-- ACTION ROW: VERIFY & TAMPER BUTTONS -->
               <div class="flex flex-col gap-2 pt-2 border-t border-border">
+                <button id="btnViewResultsModal" disabled class="w-full py-2.5 px-3 rounded border border-signalGreen/40 bg-surfaceElevated hover:bg-signalGreen hover:text-bg text-signalGreen text-xs font-mono font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  <span>View Proof Record (JSON)</span>
+                </button>
+
                 <div class="grid grid-cols-2 gap-2">
-                  <button id="btnVerify" disabled class="py-2.5 px-3 rounded border border-signalGreen/40 bg-surfaceElevated hover:bg-signalGreen hover:text-bg text-signalGreen text-xs font-mono font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1.5">
+                  <button id="btnVerify" disabled class="py-2 px-3 rounded border border-signalGreen/40 bg-surfaceElevated hover:bg-signalGreen hover:text-bg text-signalGreen text-xs font-mono font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1.5">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <span>Verify Record</span>
                   </button>
 
-                  <button id="btnTamper" disabled class="py-2.5 px-3 rounded border border-signalRed/40 bg-surfaceElevated hover:bg-signalRed hover:text-bg text-signalRed text-xs font-mono font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1.5">
+                  <button id="btnTamper" disabled class="py-2 px-3 rounded border border-signalRed/40 bg-surfaceElevated hover:bg-signalRed hover:text-bg text-signalRed text-xs font-mono font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1.5">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                     <span>Simulate Tamper</span>
                   </button>
                 </div>
 
-                <a id="btnExplorer" href="#" target="_blank" class="hidden py-2 px-3 rounded border border-border bg-bg hover:border-signalGreen text-xs font-mono text-center text-textPrimary transition-colors">
+                <a id="btnExplorer" href="#" target="_blank" class="hidden py-1.5 px-3 rounded border border-border bg-bg hover:border-signalGreen text-xs font-mono text-center text-textPrimary transition-colors">
                   View on PolygonScan &rarr;
                 </a>
               </div>
@@ -562,6 +567,32 @@
 
   </div>
 
+  <!-- PROOF RESULTS JSON MODAL -->
+  <div id="modalProofResults" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface border border-border rounded-lg max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-border bg-surfaceElevated flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          <h3 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">BLOCKCHAIN PROOF & RESULTS RECORD</h3>
+        </div>
+        <button id="btnCloseProofModal" class="text-textMuted hover:text-signalRed font-mono text-lg px-2 py-0.5 cursor-pointer">&times;</button>
+      </div>
+      <div class="p-5 flex-1 overflow-y-auto flex flex-col gap-3 font-mono text-xs">
+        <div class="flex justify-between items-center">
+          <span class="text-[11px] text-textMuted uppercase">Cryptographic Verification Record (`out/record.json`):</span>
+          <button id="btnCopyModalJson" class="text-[11px] text-signalGreen hover:underline font-mono cursor-pointer">COPY JSON</button>
+        </div>
+        <pre id="preModalJson" class="p-4 rounded bg-bg border border-border text-textPrimary text-[11px] overflow-x-auto leading-relaxed max-h-[50vh] select-all"></pre>
+      </div>
+      <div class="px-5 py-3 border-t border-border bg-surfaceElevated flex justify-between items-center">
+        <span class="text-[10px] font-mono text-textMuted">Immutable On-Chain Verification Proof</span>
+        <button id="btnCloseProofModalBottom" class="px-4 py-1.5 rounded border border-border bg-bg hover:border-signalGreen text-xs font-mono text-textPrimary transition-colors cursor-pointer">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
   <script>
     // State
@@ -593,6 +624,13 @@
     const btnVerify = document.getElementById("btnVerify");
     const btnTamper = document.getElementById("btnTamper");
     const btnExplorer = document.getElementById("btnExplorer");
+    const btnViewResultsModal = document.getElementById("btnViewResultsModal");
+
+    const modalProofResults = document.getElementById("modalProofResults");
+    const btnCloseProofModal = document.getElementById("btnCloseProofModal");
+    const btnCloseProofModalBottom = document.getElementById("btnCloseProofModalBottom");
+    const btnCopyModalJson = document.getElementById("btnCopyModalJson");
+    const preModalJson = document.getElementById("preModalJson");
 
     const bannerGuide = document.getElementById("bannerGuide");
     const bannerVerified = document.getElementById("bannerVerified");
@@ -899,92 +937,76 @@
           imgSourcePlaceholder.classList.add("hidden");
         }
 
-        // Render Candidates Table
-        renderCandidates(data.candidates || []);
-
-        // Helper to load any candidate into the comparison viewer
-        function loadCandidateIntoPreview(cand, isAccepted = false) {
-          if (!cand) return;
-          const candImg = cand.image_url || cand.thumbnail;
-          if (candImg) {
-            imgMatchDisplay.src = `${candImg}?t=${Date.now()}`;
-            imgMatchDisplay.classList.remove("hidden");
-            imgMatchPlaceholder.classList.add("hidden");
-          } else {
-            imgMatchDisplay.classList.add("hidden");
-            imgMatchPlaceholder.classList.remove("hidden");
-          }
-
-          matchPlatformTag.textContent = (cand.platform || "WEB").toUpperCase();
-          linkPostUrl.href = cand.url || "#";
-          linkPostUrl.textContent = cand.url || "--";
-          txtAuthor.textContent = cand.author || "Candidate Post";
-          txtPostSnippet.textContent = cand.text || cand.title || "Evaluated candidate from Google Lens search.";
-
-          if (isAccepted) {
-            matchScoreBadge.textContent = "MATCH CONFIRMED";
-            matchScoreBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-signalGreen text-signalGreen";
-            const acc = (1.0 - (cand.distance || 0.0)) * 100.0;
-            readoutAccuracy.textContent = `${acc.toFixed(1)}%`;
-            readoutAccuracy.className = "text-2xl font-bold font-mono text-signalGreen";
-            barAccuracy.style.width = `${Math.max(0, acc)}%`;
-            barAccuracy.className = "h-full bg-signalGreen transition-all duration-500";
-            valDistance.textContent = (cand.distance !== undefined && cand.distance !== null) ? cand.distance.toFixed(4) : "--";
-          } else {
-            matchScoreBadge.textContent = "REJECTED (DIST >= TOL)";
-            matchScoreBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-signalRed text-signalRed";
-            if (cand.distance !== undefined && cand.distance !== null) {
-              const acc = Math.max(0, (1.0 - cand.distance) * 100.0);
-              readoutAccuracy.textContent = `${acc.toFixed(1)}%`;
-              readoutAccuracy.className = "text-2xl font-bold font-mono text-signalRed";
-              barAccuracy.style.width = `${acc}%`;
-              barAccuracy.className = "h-full bg-signalRed transition-all duration-500";
-              valDistance.textContent = `${cand.distance.toFixed(4)} (FAIL)`;
-            } else {
-              readoutAccuracy.textContent = "0.0%";
-              readoutAccuracy.className = "text-2xl font-bold font-mono text-signalRed";
-              barAccuracy.style.width = "0%";
-              valDistance.textContent = "NO FACE IN IMAGE";
-            }
-          }
-          valTolerance.textContent = `< ${parseFloat(tolSlider.value).toFixed(2)}`;
-        }
-
         // Render Candidates Table with Pictures
-        renderCandidates(data.candidates || [], loadCandidateIntoPreview);
+        renderCandidates(data.candidates || []);
 
         if (!data.matched) {
           setStepState(2, "failed", "NO MATCH");
           hideBanners();
           bannerError.classList.remove("hidden");
           errorBannerTitle.textContent = "NO VERIFIED MATCH";
-          errorBannerText.textContent = data.reason || "Google Lens candidates were evaluated, but none satisfied the face tolerance threshold.";
+          errorBannerText.textContent = data.reason || `Evaluated ${data.candidates ? data.candidates.length : 0} candidate(s), but none satisfied the face match tolerance (tol=${tolSlider.value}).`;
 
-          // Automatically preview the closest evaluated candidate picture
-          if (data.closest_candidate) {
-            loadCandidateIntoPreview(data.closest_candidate, false);
-            appendLog(`[PREVIEW] Displaying closest evaluated candidate #${data.closest_candidate.position || 1} (dist: ${data.closest_candidate.distance})`);
-          } else if (data.candidates && data.candidates.length > 0) {
-            loadCandidateIntoPreview(data.candidates[0], false);
-          }
+          // Strictly do NOT display non-matching picture in the comparison box
+          imgMatchDisplay.classList.add("hidden");
+          imgMatchPlaceholder.classList.remove("hidden");
+          matchPlatformTag.textContent = "AWAITING MATCH";
+          matchScoreBadge.textContent = "REJECTED";
+          matchScoreBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-signalRed text-signalRed";
+          readoutAccuracy.textContent = "0.0%";
+          readoutAccuracy.className = "text-2xl font-bold font-mono text-signalRed";
+          barAccuracy.style.width = "0%";
+          barAccuracy.className = "h-full bg-signalRed transition-all duration-500";
+          valDistance.textContent = "NO PASS";
+          valTolerance.textContent = `< ${parseFloat(tolSlider.value).toFixed(2)}`;
+
+          linkPostUrl.href = "#";
+          linkPostUrl.textContent = "--";
+          txtAuthor.textContent = "--";
+          txtPostSnippet.textContent = "No candidate satisfied the cosine distance matching tolerance. Evaluated candidate records are listed in the table below.";
+
+          // Reset Blockchain Proof Card to Unanchored
+          proofStatusBadge.textContent = "UNANCHORED";
+          proofStatusBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-textMuted";
+          txtContentHash.textContent = "--";
+          txtTxOrBlock.textContent = "--";
+          txtBlockIndex.textContent = "--";
+          txtTimestamp.textContent = "--";
+          btnViewResultsModal.disabled = true;
+          btnVerify.disabled = true;
+          btnTamper.disabled = true;
+          btnExplorer.classList.add("hidden");
           return;
         }
 
-        // Success Path!
+        // Success Path! (Matched according to cosine distance)
         setStepState(2, "done", "COMPLETED");
         setStepState(3, "done", "ANCHORED");
 
         lastRecordPayload = data;
 
-        // Render Match Result Card
-        loadCandidateIntoPreview({
-          platform: data.post.platform,
-          url: data.post.post_url,
-          author: data.post.author,
-          text: data.post.text,
-          distance: data.cosine_distance,
-          image_url: data.matched_image_url,
-        }, true);
+        // Render Match Result Card with verified matched post
+        matchPlatformTag.textContent = (data.post.platform || "WEB").toUpperCase();
+        matchScoreBadge.textContent = "MATCH CONFIRMED";
+        matchScoreBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-signalGreen text-signalGreen";
+
+        readoutAccuracy.textContent = `${data.accuracy_pct.toFixed(1)}%`;
+        readoutAccuracy.className = "text-2xl font-bold font-mono text-signalGreen";
+        barAccuracy.style.width = `${data.accuracy_pct}%`;
+        barAccuracy.className = "h-full bg-signalGreen transition-all duration-500";
+        valDistance.textContent = data.cosine_distance.toFixed(4);
+        valTolerance.textContent = `< ${parseFloat(tolSlider.value).toFixed(2)}`;
+
+        linkPostUrl.href = data.post.post_url;
+        linkPostUrl.textContent = data.post.post_url;
+        txtAuthor.textContent = data.post.author || "N/A (Public Author)";
+        txtPostSnippet.textContent = data.post.text || "No text body extracted.";
+
+        if (data.matched_image_url) {
+          imgMatchDisplay.src = `${data.matched_image_url}?t=${Date.now()}`;
+          imgMatchDisplay.classList.remove("hidden");
+          imgMatchPlaceholder.classList.add("hidden");
+        }
 
         // Render Blockchain Proof Card
         proofStatusBadge.textContent = data.anchor.status_label || "ANCHORED";
@@ -1001,6 +1023,7 @@
           btnExplorer.classList.add("hidden");
         }
 
+        btnViewResultsModal.disabled = false;
         btnVerify.disabled = false;
         btnTamper.disabled = false;
 
@@ -1144,6 +1167,45 @@
       } finally {
         btnTamper.disabled = false;
       }
+    });
+
+    // PROOF RECORD JSON MODAL ACTIONS
+    btnViewResultsModal.addEventListener("click", () => {
+      if (!lastRecordPayload) return;
+      const displayData = {
+        status: lastRecordPayload.matched ? "MATCH_CONFIRMED" : "NO_MATCH",
+        canonical_record: {
+          platform: lastRecordPayload.post?.platform,
+          post_url: lastRecordPayload.post?.post_url,
+          author: lastRecordPayload.post?.author,
+          posted_at: lastRecordPayload.post?.posted_at,
+          text: lastRecordPayload.post?.text,
+          image_sha256: lastRecordPayload.post?.image_sha256,
+        },
+        content_hash: lastRecordPayload.anchor?.content_hash,
+        face_match: {
+          accuracy_pct: lastRecordPayload.accuracy_pct,
+          cosine_distance: lastRecordPayload.cosine_distance,
+          tolerance: parseFloat(tolSlider.value),
+        },
+        blockchain_anchor: lastRecordPayload.anchor,
+        evaluated_candidates_count: lastRecordPayload.candidates?.length || 0,
+      };
+      preModalJson.textContent = JSON.stringify(displayData, null, 2);
+      modalProofResults.classList.remove("hidden");
+    });
+
+    btnCloseProofModal.addEventListener("click", () => modalProofResults.classList.add("hidden"));
+    btnCloseProofModalBottom.addEventListener("click", () => modalProofResults.classList.add("hidden"));
+    modalProofResults.addEventListener("click", (e) => {
+      if (e.target === modalProofResults) modalProofResults.classList.add("hidden");
+    });
+
+    btnCopyModalJson.addEventListener("click", () => {
+      navigator.clipboard.writeText(preModalJson.textContent);
+      const orig = btnCopyModalJson.textContent;
+      btnCopyModalJson.textContent = "COPIED!";
+      setTimeout(() => (btnCopyModalJson.textContent = orig), 1500);
     });
 
     // Check Chain Status on Load
