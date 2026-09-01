@@ -10,6 +10,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
+  <!-- Cropper.js for Interactive Manual Face & Area Cropping -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -109,6 +113,23 @@
       margin-left: -20rem; /* -320px */
       opacity: 0;
       pointer-events: none;
+    }
+
+    /* Cropper.js Dark Console Custom Theme */
+    .cropper-view-box {
+      outline: 2px solid #2BD576 !important;
+    }
+    .cropper-line {
+      background-color: #2BD576 !important;
+    }
+    .cropper-point {
+      background-color: #2BD576 !important;
+      width: 8px !important;
+      height: 8px !important;
+      border-radius: 2px !important;
+    }
+    .cropper-modal {
+      background-color: rgba(14, 17, 22, 0.82) !important;
     }
   </style>
 </head>
@@ -351,10 +372,23 @@
                 <span class="text-[10px] text-signalGreen font-bold mt-1">✓ READY FOR BIOMETRIC EXTRACTION</span>
               </div>
             </div>
-            <div class="flex items-center gap-3">
-              <button id="btnClearImage" type="button" class="px-3 py-1.5 rounded border border-border hover:border-signalRed bg-surfaceElevated hover:text-signalRed text-textMuted font-mono text-xs transition-colors cursor-pointer flex items-center gap-1.5">
+            <div class="flex items-center gap-2.5">
+              <!-- MANUAL CROP BUTTON -->
+              <button id="btnOpenCropModal" type="button" class="px-3.5 py-1.5 rounded border border-signalGreen/50 hover:border-signalGreen bg-surfaceElevated hover:bg-signalGreen hover:text-bg text-signalGreen font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm" title="Manually crop target face or region">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" /></svg>
+                <span>✂ Crop Face</span>
+              </button>
+
+              <!-- REVERT TO ORIGINAL (Visible when cropped) -->
+              <button id="btnRevertCrop" type="button" class="hidden px-3 py-1.5 rounded border border-border hover:border-textSecondary bg-surfaceElevated text-textMuted hover:text-textPrimary font-mono text-xs transition-colors cursor-pointer flex items-center gap-1.5" title="Revert back to full uncropped image">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                <span>↺ Full Image</span>
+              </button>
+
+              <!-- RESET IMAGE BUTTON -->
+              <button id="btnClearImage" type="button" class="px-3 py-1.5 rounded border border-border hover:border-signalRed bg-surfaceElevated hover:text-signalRed text-textMuted font-mono text-xs transition-colors cursor-pointer flex items-center gap-1.5" title="Remove image">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                <span>Reset Image</span>
+                <span>Reset</span>
               </button>
             </div>
           </div>
@@ -961,10 +995,94 @@
     </div>
   </div>
 
+  <!-- MODAL 3: MANUAL CROP MODAL -->
+  <div id="modalCropImage" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface border border-border rounded-lg max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="px-5 py-3.5 border-b border-border bg-surfaceElevated flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded bg-signalGreen/15 border border-signalGreen/40 flex items-center justify-center text-signalGreen font-bold text-xs">✂</div>
+          <h3 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">MANUAL FACIAL & REGION CROPPER</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-signalGreen">INTERACTIVE CROP</span>
+          <button id="btnCloseCropModal" class="text-textMuted hover:text-signalRed font-mono text-lg px-2 py-0.5 cursor-pointer">&times;</button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 flex-1 overflow-y-auto flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <p class="text-xs text-textMuted font-mono">
+            Drag, resize, or zoom the bounding box over the subject's face to isolate facial biometrics before scanning.
+          </p>
+          <span id="cropDimensionsBadge" class="text-[10px] font-mono text-signalGreen px-2 py-0.5 rounded bg-bg border border-border">Framing Area</span>
+        </div>
+
+        <!-- Crop Viewport Canvas / Image Container -->
+        <div class="w-full h-[380px] bg-bg rounded-lg border border-border overflow-hidden flex items-center justify-center relative select-none">
+          <img id="imgCropTarget" src="" alt="Crop Target" class="max-h-full max-w-full block" />
+        </div>
+
+        <!-- Crop Toolbar: Aspect Ratio & Transform Controls -->
+        <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded bg-surfaceElevated border border-border font-mono text-xs">
+          
+          <!-- Aspect Ratio Options -->
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] text-textMuted uppercase font-bold">Aspect Ratio:</span>
+            <div class="flex items-center gap-1 bg-bg p-1 rounded border border-border">
+              <button id="btnAspectFree" type="button" class="btn-aspect px-2 py-1 rounded text-[11px] font-medium bg-surfaceElevated border border-signalGreen text-signalGreen cursor-pointer">Freeform</button>
+              <button id="btnAspect1to1" type="button" class="btn-aspect px-2 py-1 rounded text-[11px] font-medium text-textMuted hover:text-textPrimary cursor-pointer">1:1 Square (Face)</button>
+              <button id="btnAspect4to3" type="button" class="btn-aspect px-2 py-1 rounded text-[11px] font-medium text-textMuted hover:text-textPrimary cursor-pointer">4:3</button>
+              <button id="btnAspect3to4" type="button" class="btn-aspect px-2 py-1 rounded text-[11px] font-medium text-textMuted hover:text-textPrimary cursor-pointer">3:4</button>
+            </div>
+          </div>
+
+          <!-- Quick Actions: Zoom / Rotate / Reset -->
+          <div class="flex items-center gap-1.5">
+            <button id="btnCropRotateLeft" type="button" class="p-1.5 px-2 rounded bg-bg border border-border hover:border-signalGreen text-textSecondary hover:text-signalGreen transition-colors cursor-pointer" title="Rotate Left 90°">
+              ↺ 90°
+            </button>
+            <button id="btnCropRotateRight" type="button" class="p-1.5 px-2 rounded bg-bg border border-border hover:border-signalGreen text-textSecondary hover:text-signalGreen transition-colors cursor-pointer" title="Rotate Right 90°">
+              ↻ 90°
+            </button>
+            <button id="btnCropZoomIn" type="button" class="p-1.5 px-2 rounded bg-bg border border-border hover:border-signalGreen text-textSecondary hover:text-signalGreen transition-colors cursor-pointer" title="Zoom In">
+              🔍+
+            </button>
+            <button id="btnCropZoomOut" type="button" class="p-1.5 px-2 rounded bg-bg border border-border hover:border-signalGreen text-textSecondary hover:text-signalGreen transition-colors cursor-pointer" title="Zoom Out">
+              🔍-
+            </button>
+            <button id="btnCropReset" type="button" class="p-1.5 px-2.5 rounded bg-bg border border-border hover:border-signalGreen text-textSecondary hover:text-signalGreen transition-colors cursor-pointer" title="Reset Box">
+              ⟲ Reset
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 border-t border-border bg-surfaceElevated flex justify-between items-center font-mono">
+        <span class="text-[10px] text-textMuted">ArcFace 512-d embeddings are computed directly on this framed region</span>
+        <div class="flex items-center gap-3">
+          <button id="btnCloseCropModalBottom" type="button" class="px-4 py-1.5 rounded border border-border bg-bg hover:border-signalRed text-xs font-mono text-textPrimary transition-colors cursor-pointer">
+            Cancel
+          </button>
+          <button id="btnApplyCrop" type="button" class="px-5 py-1.5 rounded bg-signalGreen hover:bg-signalGreen/90 text-bg text-xs font-mono font-bold tracking-wider uppercase transition-all cursor-pointer shadow-md flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+            <span>Apply Crop & Frame Face</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
   <script>
     // State
     let selectedImageFile = null;
+    let originalImageFile = null;
+    let originalImageDataUrl = null;
+    let cropperInstance = null;
     let selectedSampleId = null;
     let activeNetwork = "local";
     let activeEngine = "google_lens";
@@ -979,9 +1097,30 @@
     const dropzonePreview = document.getElementById("dropzonePreview");
     const imgPreview = document.getElementById("imgPreview");
     const btnClearImage = document.getElementById("btnClearImage");
+    const btnOpenCropModal = document.getElementById("btnOpenCropModal");
+    const btnRevertCrop = document.getElementById("btnRevertCrop");
     const btnRunScan = document.getElementById("btnRunScan");
     const scanBtnText = document.getElementById("scanBtnText");
     const scanBtnIcon = document.getElementById("scanBtnIcon");
+
+    // Cropper Modal DOM Elements
+    const modalCropImage = document.getElementById("modalCropImage");
+    const imgCropTarget = document.getElementById("imgCropTarget");
+    const btnCloseCropModal = document.getElementById("btnCloseCropModal");
+    const btnCloseCropModalBottom = document.getElementById("btnCloseCropModalBottom");
+    const btnApplyCrop = document.getElementById("btnApplyCrop");
+    const cropDimensionsBadge = document.getElementById("cropDimensionsBadge");
+
+    const btnAspectFree = document.getElementById("btnAspectFree");
+    const btnAspect1to1 = document.getElementById("btnAspect1to1");
+    const btnAspect4to3 = document.getElementById("btnAspect4to3");
+    const btnAspect3to4 = document.getElementById("btnAspect3to4");
+
+    const btnCropRotateLeft = document.getElementById("btnCropRotateLeft");
+    const btnCropRotateRight = document.getElementById("btnCropRotateRight");
+    const btnCropZoomIn = document.getElementById("btnCropZoomIn");
+    const btnCropZoomOut = document.getElementById("btnCropZoomOut");
+    const btnCropReset = document.getElementById("btnCropReset");
 
     const btnNetLocal = document.getElementById("btnNetLocal");
     const btnNetAmoy = document.getElementById("btnNetAmoy");
@@ -1266,6 +1405,7 @@
 
     function handleFileSelect(file) {
       if (!file) return;
+      originalImageFile = file;
       selectedImageFile = file;
       selectedSampleId = null;
 
@@ -1274,12 +1414,14 @@
 
       const reader = new FileReader();
       reader.onload = (e) => {
+        originalImageDataUrl = e.target.result;
         imgPreview.src = e.target.result;
         if (uploadFileName) uploadFileName.textContent = file.name;
         if (uploadFileSize) uploadFileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
         dropzoneEmpty.classList.add("hidden");
         dropzonePreview.classList.remove("hidden");
         if (btnClearImage) btnClearImage.classList.remove("hidden");
+        if (btnRevertCrop) btnRevertCrop.classList.add("hidden");
         imgSourceDisplay.src = e.target.result;
         imgSourceDisplay.classList.remove("hidden");
         imgSourcePlaceholder.classList.add("hidden");
@@ -1290,14 +1432,23 @@
 
     function resetAllUI() {
       selectedImageFile = null;
+      originalImageFile = null;
+      originalImageDataUrl = null;
       selectedSampleId = null;
       fileInput.value = "";
       lastRecordPayload = null;
+
+      if (cropperInstance) {
+        cropperInstance.destroy();
+        cropperInstance = null;
+      }
+      modalCropImage.classList.add("hidden");
 
       // 1. Input Dropzone
       dropzoneEmpty.classList.remove("hidden");
       dropzonePreview.classList.add("hidden");
       if (btnClearImage) btnClearImage.classList.add("hidden");
+      if (btnRevertCrop) btnRevertCrop.classList.add("hidden");
 
       // 2. Left Source Image Box
       imgSourceDisplay.src = "";
@@ -1359,6 +1510,134 @@
     }
 
     if (btnClearImage) btnClearImage.addEventListener("click", resetAllUI);
+
+    // =========================================================================
+    // CROPPER MODAL CONTROLS & LOGIC
+    // =========================================================================
+    function initCropper() {
+      if (cropperInstance) {
+        cropperInstance.destroy();
+        cropperInstance = null;
+      }
+
+      if (typeof Cropper !== "undefined") {
+        cropperInstance = new Cropper(imgCropTarget, {
+          viewMode: 1,
+          dragMode: "crop",
+          autoCropArea: 0.85,
+          restore: false,
+          guides: true,
+          center: true,
+          highlight: true,
+          cropBoxMovable: true,
+          cropBoxResizable: true,
+          toggleDragModeOnDblclick: false,
+          crop(event) {
+            const d = event.detail;
+            if (cropDimensionsBadge) {
+              cropDimensionsBadge.textContent = `${Math.round(d.width)} × ${Math.round(d.height)} px`;
+            }
+          },
+        });
+      }
+    }
+
+    if (btnOpenCropModal) {
+      btnOpenCropModal.addEventListener("click", () => {
+        if (!originalImageDataUrl && !imgPreview.src) {
+          appendLog("[CROP] Please upload an image first to crop.", "text-signalYellow");
+          return;
+        }
+        imgCropTarget.src = originalImageDataUrl || imgPreview.src;
+        modalCropImage.classList.remove("hidden");
+        setTimeout(initCropper, 80);
+      });
+    }
+
+    if (btnCloseCropModal) btnCloseCropModal.addEventListener("click", () => modalCropImage.classList.add("hidden"));
+    if (btnCloseCropModalBottom) btnCloseCropModalBottom.addEventListener("click", () => modalCropImage.classList.add("hidden"));
+    if (modalCropImage) {
+      modalCropImage.addEventListener("click", (e) => {
+        if (e.target === modalCropImage) modalCropImage.classList.add("hidden");
+      });
+    }
+
+    function setCropAspect(aspectRatio, activeBtn) {
+      if (!cropperInstance) return;
+      cropperInstance.setAspectRatio(aspectRatio);
+      document.querySelectorAll(".btn-aspect").forEach((b) => {
+        b.className = "btn-aspect px-2 py-1 rounded text-[11px] font-medium text-textMuted hover:text-textPrimary cursor-pointer";
+      });
+      if (activeBtn) {
+        activeBtn.className = "btn-aspect px-2 py-1 rounded text-[11px] font-medium bg-surfaceElevated border border-signalGreen text-signalGreen cursor-pointer";
+      }
+    }
+
+    if (btnAspectFree) btnAspectFree.addEventListener("click", () => setCropAspect(NaN, btnAspectFree));
+    if (btnAspect1to1) btnAspect1to1.addEventListener("click", () => setCropAspect(1, btnAspect1to1));
+    if (btnAspect4to3) btnAspect4to3.addEventListener("click", () => setCropAspect(4 / 3, btnAspect4to3));
+    if (btnAspect3to4) btnAspect3to4.addEventListener("click", () => setCropAspect(3 / 4, btnAspect3to4));
+
+    if (btnCropRotateLeft) btnCropRotateLeft.addEventListener("click", () => cropperInstance && cropperInstance.rotate(-90));
+    if (btnCropRotateRight) btnCropRotateRight.addEventListener("click", () => cropperInstance && cropperInstance.rotate(90));
+    if (btnCropZoomIn) btnCropZoomIn.addEventListener("click", () => cropperInstance && cropperInstance.zoom(0.1));
+    if (btnCropZoomOut) btnCropZoomOut.addEventListener("click", () => cropperInstance && cropperInstance.zoom(-0.1));
+    if (btnCropReset) btnCropReset.addEventListener("click", () => cropperInstance && cropperInstance.reset());
+
+    if (btnApplyCrop) {
+      btnApplyCrop.addEventListener("click", () => {
+        if (!cropperInstance) return;
+        const canvas = cropperInstance.getCroppedCanvas({
+          maxWidth: 2048,
+          maxHeight: 2048,
+          imageSmoothingQuality: "high",
+        });
+
+        if (!canvas) {
+          appendLog("[CROP] Failed to generate cropped canvas.", "text-signalRed");
+          return;
+        }
+
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          const origName = originalImageFile ? originalImageFile.name : "scan.jpg";
+          const baseName = origName.replace(/\.[^/.]+$/, "");
+          const croppedFile = new File([blob], `${baseName}_cropped.jpg`, { type: "image/jpeg" });
+          selectedImageFile = croppedFile;
+
+          const croppedUrl = URL.createObjectURL(blob);
+          imgPreview.src = croppedUrl;
+          imgSourceDisplay.src = croppedUrl;
+          imgSourceDisplay.classList.remove("hidden");
+          imgSourcePlaceholder.classList.add("hidden");
+
+          const uploadFileName = document.getElementById("uploadFileName");
+          const uploadFileSize = document.getElementById("uploadFileSize");
+          if (uploadFileName) uploadFileName.textContent = `${origName} (Framed Face: ${canvas.width}×${canvas.height}px)`;
+          if (uploadFileSize) uploadFileSize.textContent = `${(blob.size / 1024).toFixed(1)} KB`;
+          if (btnRevertCrop) btnRevertCrop.classList.remove("hidden");
+
+          modalCropImage.classList.add("hidden");
+          appendLog(`[CROP] Framed manual face crop: ${canvas.width}×${canvas.height}px (${(blob.size / 1024).toFixed(1)} KB)`, "text-signalGreen font-bold");
+        }, "image/jpeg", 0.95);
+      });
+    }
+
+    if (btnRevertCrop) {
+      btnRevertCrop.addEventListener("click", () => {
+        if (!originalImageFile || !originalImageDataUrl) return;
+        selectedImageFile = originalImageFile;
+        imgPreview.src = originalImageDataUrl;
+        imgSourceDisplay.src = originalImageDataUrl;
+
+        const uploadFileName = document.getElementById("uploadFileName");
+        const uploadFileSize = document.getElementById("uploadFileSize");
+        if (uploadFileName) uploadFileName.textContent = originalImageFile.name;
+        if (uploadFileSize) uploadFileSize.textContent = `${(originalImageFile.size / 1024).toFixed(1)} KB`;
+        btnRevertCrop.classList.add("hidden");
+        appendLog("[CROP] Reverted to full original uncropped image.", "text-textSecondary");
+      });
+    }
 
     // Copy to clipboard
     document.querySelectorAll(".btn-copy").forEach((btn) => {
