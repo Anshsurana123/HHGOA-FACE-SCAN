@@ -326,9 +326,9 @@
         </div>
 
         <!-- Banner: Verification Passed (Hidden by default) -->
-        <div id="bannerVerified" class="hidden p-4 rounded border border-signalGreen bg-signalGreen/10 flex items-center justify-between">
+        <div id="bannerVerified" class="hidden p-4 rounded border border-signalGreen bg-signalGreen/10 flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded border border-signalGreen bg-signalGreen flex items-center justify-center text-bg font-bold">
+            <div class="w-8 h-8 rounded border border-signalGreen bg-signalGreen flex items-center justify-center text-bg font-bold shrink-0">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
               </svg>
@@ -338,13 +338,18 @@
               <p class="text-xs text-signalGreen/90" id="verifiedBannerText">Live web metadata re-fetched and cryptographically verified against on-chain block anchor.</p>
             </div>
           </div>
-          <span class="text-xs font-mono font-bold text-signalGreen px-2.5 py-1 rounded bg-bg border border-signalGreen">PROOF VALID</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="btnBannerViewVerifyProof" type="button" class="text-xs font-mono font-bold text-signalGreen hover:bg-signalGreen hover:text-bg px-3 py-1.5 rounded bg-bg border border-signalGreen transition-colors cursor-pointer flex items-center gap-1">
+              <span>View Full Proof &rarr;</span>
+            </button>
+            <span class="text-xs font-mono font-bold text-signalGreen px-2.5 py-1 rounded bg-bg border border-signalGreen">PROOF VALID</span>
+          </div>
         </div>
 
         <!-- Banner: Tamper Detected (Hidden by default) -->
-        <div id="bannerTamper" class="hidden p-4 rounded border border-signalRed bg-signalRed/10 flex items-center justify-between">
+        <div id="bannerTamper" class="hidden p-4 rounded border border-signalRed bg-signalRed/10 flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded border border-signalRed bg-signalRed flex items-center justify-center text-bg font-bold">
+            <div class="w-8 h-8 rounded border border-signalRed bg-signalRed flex items-center justify-center text-bg font-bold shrink-0">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -354,19 +359,29 @@
               <p class="text-xs text-signalRed/90" id="tamperBannerText">Content mutation altered deterministic SHA-256 hash. The blockchain rejected the altered record with cryptographic proof.</p>
             </div>
           </div>
-          <span class="text-xs font-mono font-bold text-signalRed px-2.5 py-1 rounded bg-bg border border-signalRed">HASH MISMATCH</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="btnBannerViewTamperProof" type="button" class="text-xs font-mono font-bold text-signalRed hover:bg-signalRed hover:text-bg px-3 py-1.5 rounded bg-bg border border-signalRed transition-colors cursor-pointer flex items-center gap-1">
+              <span>View Full Proof &rarr;</span>
+            </button>
+            <span class="text-xs font-mono font-bold text-signalRed px-2.5 py-1 rounded bg-bg border border-signalRed">HASH MISMATCH</span>
+          </div>
         </div>
 
         <!-- Banner: Error / No Match (Hidden by default) -->
-        <div id="bannerError" class="hidden p-4 rounded border border-signalRed/60 bg-signalRed/10 flex items-center justify-between">
+        <div id="bannerError" class="hidden p-4 rounded border border-signalRed/60 bg-signalRed/10 flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded border border-signalRed bg-signalRed flex items-center justify-center text-bg font-bold">!</div>
+            <div class="w-8 h-8 rounded border border-signalRed bg-signalRed flex items-center justify-center text-bg font-bold shrink-0">!</div>
             <div>
               <h3 class="text-xs font-bold font-mono uppercase text-signalRed" id="errorBannerTitle">SCAN NOTICE</h3>
               <p class="text-xs text-signalRed/90" id="errorBannerText">No matching face met the required tolerance threshold.</p>
             </div>
           </div>
-          <span class="text-xs font-mono text-signalRed px-2 py-1 rounded bg-bg border border-signalRed/50">EXIT CODE</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="btnBannerViewErrorVerifyProof" type="button" class="hidden text-xs font-mono font-bold text-signalRed hover:bg-signalRed hover:text-bg px-3 py-1.5 rounded bg-bg border border-signalRed/60 transition-colors cursor-pointer flex items-center gap-1">
+              <span>View Mismatch &rarr;</span>
+            </button>
+            <span class="text-xs font-mono text-signalRed px-2 py-1 rounded bg-bg border border-signalRed/50">EXIT CODE</span>
+          </div>
         </div>
 
         <!-- MIDDLE 2-COLUMN GRID: MATCH RESULT & BLOCKCHAIN PROOF -->
@@ -672,6 +687,239 @@
       <div class="px-5 py-3 border-t border-border bg-surfaceElevated flex justify-between items-center font-mono text-xs">
         <span class="text-[10px] font-mono text-textMuted">Forensic Candidate Evaluation History</span>
         <button id="btnCloseCandidatesModalBottom" class="px-4 py-1.5 rounded border border-border bg-bg hover:border-signalGreen text-xs font-mono text-textPrimary transition-colors cursor-pointer">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 1: VERIFY PROOF DETAIL MODAL -->
+  <div id="modalVerifyProof" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface border border-border rounded-lg max-w-3xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="px-5 py-3.5 border-b border-border bg-surfaceElevated flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+          <h3 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">LIVE ON-CHAIN CRYPTOGRAPHIC VERIFICATION</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="verifyModalNetworkBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-signalGreen uppercase">POLYGON AMOY</span>
+          <button id="btnCloseVerifyModal" class="text-textMuted hover:text-signalRed font-mono text-lg px-2 py-0.5 cursor-pointer">&times;</button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 flex-1 overflow-y-auto flex flex-col gap-4 font-mono text-xs">
+        
+        <!-- Status Box -->
+        <div id="verifyModalStatusBox" class="p-3.5 rounded border border-signalGreen bg-signalGreen/10 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div id="verifyModalStatusIcon" class="w-7 h-7 rounded border border-signalGreen bg-signalGreen flex items-center justify-center text-bg font-bold shrink-0">✓</div>
+            <div>
+              <h4 id="verifyModalStatusTitle" class="text-xs font-bold font-mono text-signalGreen uppercase">100% CRYPTOGRAPHIC MATCH VERIFIED</h4>
+              <p id="verifyModalStatusDesc" class="text-[11px] text-signalGreen/90">Live recomputed SHA-256 hash perfectly matches the immutable on-chain record.</p>
+            </div>
+          </div>
+          <span id="verifyModalStatusTag" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-bg border border-signalGreen text-signalGreen shrink-0">MATCH PASSED</span>
+        </div>
+
+        <!-- Hash Comparison (Saved vs Live) -->
+        <div class="flex flex-col gap-2">
+          <span class="text-[11px] text-textMuted font-bold uppercase">1. Deterministic Content Hash Comparison (SHA-256):</span>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            
+            <!-- Saved Hash -->
+            <div class="p-3 rounded bg-bg border border-border flex flex-col gap-1.5">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-textMuted uppercase font-bold">SAVED HASH (AT SCAN TIME)</span>
+                <button type="button" class="btn-copy-field text-[10px] font-mono text-signalGreen hover:underline cursor-pointer" data-copy-target="verifySavedHash">Copy</button>
+              </div>
+              <p id="verifySavedHash" class="text-[11px] font-mono text-textPrimary break-all select-all leading-tight bg-surfaceElevated p-2 rounded border border-border">--</p>
+            </div>
+
+            <!-- Live Hash -->
+            <div class="p-3 rounded bg-bg border border-border flex flex-col gap-1.5">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-textMuted uppercase font-bold">LIVE RECOMPUTED HASH</span>
+                <button type="button" class="btn-copy-field text-[10px] font-mono text-signalGreen hover:underline cursor-pointer" data-copy-target="verifyLiveHash">Copy</button>
+              </div>
+              <p id="verifyLiveHash" class="text-[11px] font-mono text-textPrimary break-all select-all leading-tight bg-surfaceElevated p-2 rounded border border-border">--</p>
+            </div>
+
+          </div>
+
+          <!-- Hash Equality Result Indicator -->
+          <div id="verifyHashMatchIndicator" class="px-3 py-2 rounded bg-surfaceElevated border border-border flex items-center justify-between text-[11px]">
+            <span class="text-textMuted">Hash Parity Check:</span>
+            <span id="verifyHashMatchText" class="font-bold text-signalGreen">✔ Exact Match (hashes_match: true)</span>
+          </div>
+        </div>
+
+        <!-- Blockchain Anchor Details Grid -->
+        <div class="flex flex-col gap-2">
+          <span class="text-[11px] text-textMuted font-bold uppercase">2. On-Chain Registration & Immutability Anchor:</span>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            
+            <!-- Contract / Block -->
+            <div class="p-3 rounded bg-bg border border-border flex flex-col gap-1">
+              <div class="flex justify-between items-center">
+                <span id="lblVerifyContract" class="text-[10px] text-textMuted uppercase font-bold">SMART CONTRACT ADDRESS</span>
+                <button type="button" class="btn-copy-field text-[10px] font-mono text-signalGreen hover:underline cursor-pointer" data-copy-target="verifyContractAddr">Copy</button>
+              </div>
+              <p id="verifyContractAddr" class="text-[11px] font-mono text-textPrimary break-all select-all">--</p>
+            </div>
+
+            <!-- Anchored By -->
+            <div class="p-3 rounded bg-bg border border-border flex flex-col gap-1">
+              <div class="flex justify-between items-center">
+                <span id="lblVerifyAnchorer" class="text-[10px] text-textMuted uppercase font-bold">ANCHORED BY (WALLET / NODE)</span>
+                <button type="button" class="btn-copy-field text-[10px] font-mono text-signalGreen hover:underline cursor-pointer" data-copy-target="verifyAnchorerAddr">Copy</button>
+              </div>
+              <p id="verifyAnchorerAddr" class="text-[11px] font-mono text-textPrimary break-all select-all">--</p>
+            </div>
+
+            <!-- Timestamp -->
+            <div class="p-3 rounded bg-bg border border-border flex flex-col gap-1">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-textMuted uppercase font-bold">ANCHORED TIMESTAMP</span>
+                <button type="button" class="btn-copy-field text-[10px] font-mono text-signalGreen hover:underline cursor-pointer" data-copy-target="verifyTimestamp">Copy</button>
+              </div>
+              <p id="verifyTimestamp" class="text-[11px] font-mono text-textPrimary">--</p>
+            </div>
+
+            <!-- Source Post URL -->
+            <div class="p-3 rounded bg-bg border border-border flex flex-col gap-1">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-textMuted uppercase font-bold">SOURCE POST URL</span>
+                <button type="button" class="btn-copy-field text-[10px] font-mono text-signalGreen hover:underline cursor-pointer" data-copy-target="verifyPostUrl">Copy</button>
+              </div>
+              <a id="verifyPostUrl" href="#" target="_blank" rel="noopener noreferrer" class="text-[11px] font-mono text-signalGreen hover:underline truncate block">--</a>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Explorer Link Button -->
+        <a id="verifyModalExplorerLink" href="#" target="_blank" rel="noopener noreferrer" class="py-2.5 px-4 rounded border border-signalGreen/40 bg-surfaceElevated hover:bg-signalGreen hover:text-bg text-signalGreen text-xs font-mono font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+          <span id="verifyModalExplorerText">View Contract on PolygonScan &rarr;</span>
+        </a>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 border-t border-border bg-surfaceElevated flex justify-between items-center">
+        <span class="text-[10px] font-mono text-textMuted">Deterministic SHA-256 Canonical State Anchor</span>
+        <button id="btnCloseVerifyModalBottom" class="px-4 py-1.5 rounded border border-border bg-bg hover:border-signalGreen text-xs font-mono text-textPrimary transition-colors cursor-pointer">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: TAMPER PROOF DETAIL MODAL -->
+  <div id="modalTamperProof" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface border border-border rounded-lg max-w-3xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="px-5 py-3.5 border-b border-border bg-surfaceElevated flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-signalRed" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <h3 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">TAMPER-EVIDENCE & CRYPTOGRAPHIC REJECTION PROOF</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="tamperModalNetworkBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-signalRed uppercase">POLYGON AMOY</span>
+          <button id="btnCloseTamperModal" class="text-textMuted hover:text-signalRed font-mono text-lg px-2 py-0.5 cursor-pointer">&times;</button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 flex-1 overflow-y-auto flex flex-col gap-4 font-mono text-xs">
+        
+        <!-- Status Box -->
+        <div class="p-3.5 rounded border border-signalRed bg-signalRed/10 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-7 h-7 rounded border border-signalRed bg-signalRed flex items-center justify-center text-bg font-bold shrink-0">✘</div>
+            <div>
+              <h4 class="text-xs font-bold font-mono text-signalRed uppercase">TAMPER DETECTED: ON-CHAIN REJECTION CONFIRMED</h4>
+              <p id="tamperModalStatusDesc" class="text-[11px] text-signalRed/90">Single character mutation produced altered SHA-256 hash. The blockchain rejected the altered record.</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-bg border border-signalRed text-signalRed shrink-0">REJECTED</span>
+        </div>
+
+        <!-- Status Line: on_chain_found: false -->
+        <div class="px-3 py-2 rounded bg-surfaceElevated border border-border flex items-center justify-between text-[11px]">
+          <span class="text-textMuted">Smart Contract Query Result:</span>
+          <span class="font-bold text-signalRed">on_chain_found: false (Record Unanchored & Forged)</span>
+        </div>
+
+        <!-- Text Mutation Comparison -->
+        <div class="flex flex-col gap-2">
+          <span class="text-[11px] text-textMuted font-bold uppercase">1. Content Mutation (Avalanche Demonstration):</span>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            
+            <!-- Original Text -->
+            <div class="p-3 rounded bg-bg border border-signalGreen/40 flex flex-col gap-1.5">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-signalGreen uppercase font-bold">ORIGINAL POST TEXT (GENUINE)</span>
+                <button type="button" class="btn-copy-field text-[10px] font-mono text-signalGreen hover:underline cursor-pointer" data-copy-target="tamperOriginalText">Copy</button>
+              </div>
+              <p id="tamperOriginalText" class="text-[11px] font-mono text-textPrimary leading-relaxed bg-surfaceElevated p-2 rounded border border-border min-h-[60px] select-all">--</p>
+            </div>
+
+            <!-- Mutated Text -->
+            <div class="p-3 rounded bg-bg border border-signalRed/40 flex flex-col gap-1.5">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-signalRed uppercase font-bold">MUTATED POST TEXT (FORGED)</span>
+                <button type="button" class="btn-copy-field text-[10px] font-mono text-signalRed hover:underline cursor-pointer" data-copy-target="tamperMutatedText">Copy</button>
+              </div>
+              <p id="tamperMutatedText" class="text-[11px] font-mono text-textPrimary leading-relaxed bg-surfaceElevated p-2 rounded border border-border min-h-[60px] select-all">--</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Hash Comparison -->
+        <div class="flex flex-col gap-2">
+          <span class="text-[11px] text-textMuted font-bold uppercase">2. Cryptographic Hash Divergence (SHA-256):</span>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            
+            <!-- Original Hash -->
+            <div class="p-3 rounded bg-bg border border-border flex flex-col gap-1.5">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-signalGreen uppercase font-bold">ORIGINAL HASH (ANCHORED ON-CHAIN)</span>
+                <button type="button" class="btn-copy-field text-[10px] font-mono text-signalGreen hover:underline cursor-pointer" data-copy-target="tamperOriginalHash">Copy</button>
+              </div>
+              <p id="tamperOriginalHash" class="text-[11px] font-mono text-signalGreen break-all select-all leading-tight bg-surfaceElevated p-2 rounded border border-border">--</p>
+            </div>
+
+            <!-- Tampered Hash -->
+            <div class="p-3 rounded bg-bg border border-border flex flex-col gap-1.5">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-signalRed uppercase font-bold">TAMPERED HASH (NOT FOUND ON-CHAIN)</span>
+                <button type="button" class="btn-copy-field text-[10px] font-mono text-signalRed hover:underline cursor-pointer" data-copy-target="tamperTamperedHash">Copy</button>
+              </div>
+              <p id="tamperTamperedHash" class="text-[11px] font-mono text-signalRed break-all select-all leading-tight bg-surfaceElevated p-2 rounded border border-border">--</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Network Reason Box -->
+        <div class="p-3 rounded bg-bg border border-border flex flex-col gap-1">
+          <div class="flex justify-between items-center">
+            <span class="text-[10px] text-textMuted uppercase font-bold">CRYPTOGRAPHIC REASON / PROOF</span>
+            <button type="button" class="btn-copy-field text-[10px] font-mono text-signalRed hover:underline cursor-pointer" data-copy-target="tamperReasonText">Copy</button>
+          </div>
+          <p id="tamperReasonText" class="text-xs font-mono text-textPrimary">--</p>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 border-t border-border bg-surfaceElevated flex justify-between items-center">
+        <span class="text-[10px] font-mono text-textMuted">Avalanche Effect: 1-byte change produces completely uncorrelated SHA-256 digest</span>
+        <button id="btnCloseTamperModalBottom" class="px-4 py-1.5 rounded border border-border bg-bg hover:border-signalRed text-xs font-mono text-textPrimary transition-colors cursor-pointer">
           Close
         </button>
       </div>
@@ -1327,6 +1575,161 @@
       if (e.target === modalCandidates) modalCandidates.classList.add("hidden");
     });
 
+    // DOM Elements for Verification & Tamper Detail Modals
+    const modalVerifyProof = document.getElementById("modalVerifyProof");
+    const verifyModalNetworkBadge = document.getElementById("verifyModalNetworkBadge");
+    const verifyModalStatusBox = document.getElementById("verifyModalStatusBox");
+    const verifyModalStatusIcon = document.getElementById("verifyModalStatusIcon");
+    const verifyModalStatusTitle = document.getElementById("verifyModalStatusTitle");
+    const verifyModalStatusDesc = document.getElementById("verifyModalStatusDesc");
+    const verifyModalStatusTag = document.getElementById("verifyModalStatusTag");
+    const verifySavedHash = document.getElementById("verifySavedHash");
+    const verifyLiveHash = document.getElementById("verifyLiveHash");
+    const verifyHashMatchIndicator = document.getElementById("verifyHashMatchIndicator");
+    const verifyHashMatchText = document.getElementById("verifyHashMatchText");
+    const lblVerifyContract = document.getElementById("lblVerifyContract");
+    const verifyContractAddr = document.getElementById("verifyContractAddr");
+    const lblVerifyAnchorer = document.getElementById("lblVerifyAnchorer");
+    const verifyAnchorerAddr = document.getElementById("verifyAnchorerAddr");
+    const verifyTimestamp = document.getElementById("verifyTimestamp");
+    const verifyPostUrl = document.getElementById("verifyPostUrl");
+    const verifyModalExplorerLink = document.getElementById("verifyModalExplorerLink");
+    const verifyModalExplorerText = document.getElementById("verifyModalExplorerText");
+    const btnCloseVerifyModal = document.getElementById("btnCloseVerifyModal");
+    const btnCloseVerifyModalBottom = document.getElementById("btnCloseVerifyModalBottom");
+    const btnBannerViewVerifyProof = document.getElementById("btnBannerViewVerifyProof");
+    const btnBannerViewErrorVerifyProof = document.getElementById("btnBannerViewErrorVerifyProof");
+
+    const modalTamperProof = document.getElementById("modalTamperProof");
+    const tamperModalNetworkBadge = document.getElementById("tamperModalNetworkBadge");
+    const tamperModalStatusDesc = document.getElementById("tamperModalStatusDesc");
+    const tamperOriginalText = document.getElementById("tamperOriginalText");
+    const tamperMutatedText = document.getElementById("tamperMutatedText");
+    const tamperOriginalHash = document.getElementById("tamperOriginalHash");
+    const tamperTamperedHash = document.getElementById("tamperTamperedHash");
+    const tamperReasonText = document.getElementById("tamperReasonText");
+    const btnCloseTamperModal = document.getElementById("btnCloseTamperModal");
+    const btnCloseTamperModalBottom = document.getElementById("btnCloseTamperModalBottom");
+    const btnBannerViewTamperProof = document.getElementById("btnBannerViewTamperProof");
+
+    // Modal Populate Functions
+    function populateVerifyModal(data) {
+      const net = (data.network || activeNetwork || "amoy").toUpperCase();
+      verifyModalNetworkBadge.textContent = net === "LOCAL" ? "LOCAL POW CHAIN" : "POLYGON AMOY";
+
+      const isVerified = data.verified === true;
+      const hashesMatch = data.hashes_match === true || (data.saved_hash && data.live_hash && data.saved_hash.toLowerCase() === data.live_hash.toLowerCase());
+
+      if (isVerified) {
+        verifyModalStatusBox.className = "p-3.5 rounded border border-signalGreen bg-signalGreen/10 flex items-center justify-between";
+        verifyModalStatusIcon.className = "w-7 h-7 rounded border border-signalGreen bg-signalGreen flex items-center justify-center text-bg font-bold shrink-0";
+        verifyModalStatusIcon.textContent = "✓";
+        verifyModalStatusTitle.className = "text-xs font-bold font-mono text-signalGreen uppercase";
+        verifyModalStatusTitle.textContent = "100% CRYPTOGRAPHIC MATCH VERIFIED";
+        verifyModalStatusDesc.className = "text-[11px] text-signalGreen/90";
+        verifyModalStatusDesc.textContent = `Live recomputed SHA-256 hash perfectly matches the immutable on-chain record on ${net}.`;
+        verifyModalStatusTag.className = "text-xs font-mono font-bold px-2 py-0.5 rounded bg-bg border border-signalGreen text-signalGreen shrink-0";
+        verifyModalStatusTag.textContent = "MATCH PASSED";
+
+        verifyHashMatchText.className = "font-bold text-signalGreen";
+        verifyHashMatchText.textContent = "✔ Exact Match (hashes_match: true)";
+      } else {
+        verifyModalStatusBox.className = "p-3.5 rounded border border-signalRed bg-signalRed/10 flex items-center justify-between";
+        verifyModalStatusIcon.className = "w-7 h-7 rounded border border-signalRed bg-signalRed flex items-center justify-center text-bg font-bold shrink-0";
+        verifyModalStatusIcon.textContent = "✘";
+        verifyModalStatusTitle.className = "text-xs font-bold font-mono text-signalRed uppercase";
+        verifyModalStatusTitle.textContent = "VERIFICATION FAILED / UNANCHORED HASH";
+        verifyModalStatusDesc.className = "text-[11px] text-signalRed/90";
+        verifyModalStatusDesc.textContent = data.error || `Live hash does not match anchored record on ${net}.`;
+        verifyModalStatusTag.className = "text-xs font-mono font-bold px-2 py-0.5 rounded bg-bg border border-signalRed text-signalRed shrink-0";
+        verifyModalStatusTag.textContent = "MISMATCH / REJECTED";
+
+        verifyHashMatchText.className = "font-bold text-signalRed";
+        verifyHashMatchText.textContent = `✘ Discrepancy Detected (hashes_match: ${hashesMatch})`;
+      }
+
+      verifySavedHash.textContent = data.saved_hash || (lastRecordPayload ? lastRecordPayload.anchor?.content_hash : "--");
+      verifyLiveHash.textContent = data.live_hash || "--";
+
+      if (data.network === "local") {
+        lblVerifyContract.textContent = "LOCAL BLOCK HASH";
+        verifyContractAddr.textContent = data.proof?.block_hash || (lastRecordPayload ? lastRecordPayload.anchor?.block_hash : "--");
+        lblVerifyAnchorer.textContent = "MINED BLOCK INDEX";
+        verifyAnchorerAddr.textContent = data.proof?.block_index !== undefined ? `#${data.proof.block_index}` : (lastRecordPayload ? `#${lastRecordPayload.anchor?.block_index}` : "--");
+        verifyTimestamp.textContent = data.proof?.anchored_at || (lastRecordPayload ? lastRecordPayload.anchor?.anchored_at : "--");
+        verifyModalExplorerLink.classList.add("hidden");
+      } else {
+        lblVerifyContract.textContent = "SMART CONTRACT ADDRESS";
+        verifyContractAddr.textContent = data.proof?.contract_address || (lastRecordPayload ? lastRecordPayload.anchor?.contract_address : "0x80140BdB94D3808CbcD06f79D4fF3Faa3f591362");
+        lblVerifyAnchorer.textContent = "ANCHORED BY (WALLET)";
+        verifyAnchorerAddr.textContent = data.proof?.anchored_by || (lastRecordPayload ? (lastRecordPayload.anchor?.sender || lastRecordPayload.anchor?.anchored_by) : "--") || "0x2De14c641A9B8c6570Ac6633cF9983dD981C519f";
+        verifyTimestamp.textContent = data.proof?.anchored_timestamp || data.proof?.anchored_at || (lastRecordPayload ? lastRecordPayload.anchor?.anchored_at : "--");
+        
+        const explorer = data.proof?.explorer_url || (lastRecordPayload ? lastRecordPayload.anchor?.explorer_url : null) || `https://amoy.polygonscan.com/address/${verifyContractAddr.textContent}`;
+        verifyModalExplorerLink.href = explorer;
+        verifyModalExplorerText.textContent = "View Contract / Transaction on PolygonScan ↗";
+        verifyModalExplorerLink.classList.remove("hidden");
+      }
+
+      const postUrl = data.proof?.post_url || (lastRecordPayload ? lastRecordPayload.post?.post_url : "--");
+      verifyPostUrl.textContent = postUrl;
+      verifyPostUrl.href = (postUrl && postUrl !== "--") ? postUrl : "#";
+
+      modalVerifyProof.classList.remove("hidden");
+    }
+
+    function populateTamperModal(data) {
+      const net = (data.network || activeNetwork || "amoy").toUpperCase();
+      tamperModalNetworkBadge.textContent = net === "LOCAL" ? "LOCAL POW CHAIN" : "POLYGON AMOY";
+
+      tamperModalStatusDesc.textContent = `Single-character mutation altered deterministic SHA-256 hash. The blockchain rejected the altered record on ${net}.`;
+      tamperOriginalText.textContent = data.original_text || "--";
+      tamperMutatedText.textContent = data.mutated_text || "--";
+      tamperOriginalHash.textContent = data.original_hash || "--";
+      tamperTamperedHash.textContent = data.tampered_hash || "--";
+      tamperReasonText.textContent = data.reason || data.status || `Tampered content hash was rejected by smart contract on ${net}.`;
+
+      modalTamperProof.classList.remove("hidden");
+    }
+
+    // Modal Close & Dismiss Listeners
+    btnCloseVerifyModal.addEventListener("click", () => modalVerifyProof.classList.add("hidden"));
+    btnCloseVerifyModalBottom.addEventListener("click", () => modalVerifyProof.classList.add("hidden"));
+    modalVerifyProof.addEventListener("click", (e) => {
+      if (e.target === modalVerifyProof) modalVerifyProof.classList.add("hidden");
+    });
+
+    btnCloseTamperModal.addEventListener("click", () => modalTamperProof.classList.add("hidden"));
+    btnCloseTamperModalBottom.addEventListener("click", () => modalTamperProof.classList.add("hidden"));
+    modalTamperProof.addEventListener("click", (e) => {
+      if (e.target === modalTamperProof) modalTamperProof.classList.add("hidden");
+    });
+
+    btnBannerViewVerifyProof.addEventListener("click", () => modalVerifyProof.classList.remove("hidden"));
+    btnBannerViewTamperProof.addEventListener("click", () => modalTamperProof.classList.remove("hidden"));
+    btnBannerViewErrorVerifyProof.addEventListener("click", () => modalVerifyProof.classList.remove("hidden"));
+
+    // Generic Clipboard Copy Handler for Detail Modals
+    document.querySelectorAll(".btn-copy-field").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.getAttribute("data-copy-target");
+        const el = document.getElementById(targetId);
+        if (el) {
+          const val = el.textContent || el.innerText || el.href || "";
+          if (val && val !== "--" && val !== "#") {
+            navigator.clipboard.writeText(val);
+            const orig = btn.textContent;
+            btn.textContent = "COPIED!";
+            btn.classList.add("font-bold");
+            setTimeout(() => {
+              btn.textContent = orig;
+              btn.classList.remove("font-bold");
+            }, 1500);
+          }
+        }
+      });
+    });
+
     // LIVE VERIFY RECORD ACTION
     btnVerify.addEventListener("click", async () => {
       btnVerify.disabled = true;
@@ -1343,12 +1746,15 @@
         const data = await res.json();
 
         hideBanners();
+        populateVerifyModal(data);
+
         if (data.verified) {
           bannerVerified.classList.remove("hidden");
           verifiedBannerText.textContent = `LIVE Blockchain Verification Passed! Recomputed Hash (${data.live_hash.slice(0, 16)}...) matches on-chain anchor on ${data.network.toUpperCase()}.`;
           appendLog(`[PASS] Live Verification Successful on ${data.network.toUpperCase()}! Hash: ${data.live_hash}`, "text-signalGreen font-bold");
         } else {
           bannerError.classList.remove("hidden");
+          btnBannerViewErrorVerifyProof.classList.remove("hidden");
           errorBannerTitle.textContent = "VERIFICATION FAILED";
           errorBannerText.textContent = data.error || "The live post metadata does not match the anchored hash.";
           appendLog(`[FAIL] Verification Failed: ${data.error}`, "text-signalRed font-bold");
@@ -1377,6 +1783,7 @@
 
         hideBanners();
         if (data.tamper_detected) {
+          populateTamperModal(data);
           bannerTamper.classList.remove("hidden");
           tamperBannerText.textContent = `Tampered text ('${data.mutated_text}') produced altered hash (${data.tampered_hash.slice(0, 16)}...). Blockchain rejected the forged hash on ${data.network.toUpperCase()}.`;
           appendLog(`[TAMPER DETECTED] Original Hash: ${data.original_hash}`, "text-textMuted");
