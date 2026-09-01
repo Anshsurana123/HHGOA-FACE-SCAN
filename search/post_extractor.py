@@ -35,24 +35,11 @@ USER_AGENT = (
     "Chrome/122.0.0.0 Safari/537.36"
 )
 
-# Enforce polite rate limiting between requests (>= 1.0s)
-_last_request_time = 0.0
-
-
-def _rate_limit():
-    global _last_request_time
-    now = time.time()
-    elapsed = now - _last_request_time
-    if elapsed < 1.0:
-        time.sleep(1.0 - elapsed)
-    _last_request_time = time.time()
-
 
 def normalize_url(url: str) -> str:
     """Strips ephemeral query parameters (like utm tracking) while preserving canonical post path."""
     parsed = urlparse(url)
     allowed_params = []
-    # Drop tracking query parameters
     for k, v in parse_qsl(parsed.query):
         if not k.startswith("utm_") and k not in ("s", "t", "ref_src", "fbclid", "igshid"):
             allowed_params.append((k, v))
@@ -79,9 +66,8 @@ def is_social_media_url(url: str) -> bool:
     return get_social_platform(url) is not None
 
 
-def _http_get(url: str, headers: dict | None = None, timeout: int = 10, max_retries: int = 1) -> requests.Response:
-    """Polite HTTP GET with rate limiting, timeouts, and retry."""
-    _rate_limit()
+def _http_get(url: str, headers: dict | None = None, timeout: int = 4, max_retries: int = 0) -> requests.Response:
+    """Fast HTTP GET with non-blocking timeouts."""
     req_headers = {"User-Agent": USER_AGENT, "Accept": "*/*"}
     if headers:
         req_headers.update(headers)
@@ -94,7 +80,7 @@ def _http_get(url: str, headers: dict | None = None, timeout: int = 10, max_retr
         except requests.RequestException as exc:
             last_exc = exc
             if attempt < max_retries:
-                time.sleep(1.0)
+                time.sleep(0.3)
                 continue
             raise PostExtractionError(f"HTTP request to {url} failed: {exc}") from exc
 

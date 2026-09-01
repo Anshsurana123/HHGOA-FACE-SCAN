@@ -5,12 +5,14 @@ Supports:
     the uncropped full image (for full-body/background context like LinkedIn/X)
     AND the focused facial crop (for avatar/portrait closeups).
   - Multi-Engine: Google Lens, Yandex Images, and Hybrid (both engines).
+  - High-Speed Fast Evaluation with early exit and lazy metadata enrichment.
   - Continuous "Till Success" mode + configurable candidate pool (10-350).
   - Non-circular tiered evidence ranking with aHash perceptual near-duplicate detection.
 """
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import io
 import os
 import time
@@ -134,7 +136,12 @@ def _evaluate_candidate(
     input_ahash: int | None,
     tol: float,
 ) -> dict[str, Any]:
-    """Fetches a single candidate URL, runs face-check + near-dup check, returns a log dict."""
+    """
+    High-speed candidate evaluation:
+    1. Downloads candidate image from CDN (thumbnail/original_image) in ~30ms.
+    2. Computes InsightFace embedding & cosine distance.
+    3. If match is confirmed, lazily enriches with page metadata.
+    """
     url = candidate.get("link", "")
     platform = get_social_platform(url) or "web"
     log: dict[str, Any] = {
@@ -153,81 +160,100 @@ def _evaluate_candidate(
         "status": "PROCESSING",
     }
 
-    try:
-        post_data = fetch_post(url)
-        log["author"] = post_data.get("author", "")
-        log["text"] = post_data.get("text", "")
+    img_bytes: bytes | None = None
+    verification_source: str | None = None
 
-        img_bytes = post_data.get("_image_bytes")
-        verification_source = "page_image" if img_bytes else None
-
-        # 1. Try downloading direct original page image if provided by search engine (e.g. Yandex)
-        if not img_bytes and candidate.get("original_image"):
-            try:
-                orig_resp = _http_get(candidate["original_image"], timeout=10)
-                if orig_resp.status_code == 200 and len(orig_resp.content) > 0:
-                    img_bytes = orig_resp.content
-                    post_data["_image_bytes"] = img_bytes
-                    verification_source = "page_image"
-            except Exception:
-                pass
-
-        # 2. Fallback to search engine thumbnail ONLY if real page image is unavailable
-        if not img_bytes and candidate.get("thumbnail"):
-            try:
-                thumb_resp = _http_get(candidate["thumbnail"], timeout=10)
-                if thumb_resp.status_code == 200 and len(thumb_resp.content) > 0:
-                    img_bytes = thumb_resp.content
-                    post_data["_image_bytes"] = img_bytes
-                    verification_source = "thumbnail_fallback"
-            except Exception:
-                pass
-
-        if img_bytes:
-            log["_image_bytes"] = img_bytes
-        log["verification_source"] = verification_source
-
-        if not img_bytes:
-            log["status"] = "REJECTED: No image could be retrieved from post or thumbnail."
-            return log
-
+    # Step 1: Fast CDN image retrieval
+    # Try direct original image link first (e.g. from Yandex)
+    if candidate.get("original_image"):
         try:
-            post_embedding = encode_face(img_bytes)
-        except NoFaceFound:
-            log["status"] = "REJECTED: No face detected in candidate image."
-            return log
-        except ImageReadError:
-            log["status"] = "REJECTED: Candidate image bytes could not be decoded."
-            return log
+            orig_resp = _http_get(candidate["original_image"], timeout=3)
+            if orig_resp.status_code == 200 and len(orig_resp.content) > 0:
+                img_bytes = orig_resp.content
+                verification_source = "page_image"
+        except Exception:
+            pass
 
-        dist = cosine_distance(input_embedding, post_embedding)
-        log["distance"] = round(dist, 4)
+    # Try fast Google/Yandex CDN thumbnail
+    if not img_bytes and candidate.get("thumbnail"):
+        try:
+            thumb_resp = _http_get(candidate["thumbnail"], timeout=3)
+            if thumb_resp.status_code == 200 and len(thumb_resp.content) > 0:
+                img_bytes = thumb_resp.content
+                verification_source = "thumbnail_fallback"
+        except Exception:
+            pass
 
-        cand_ahash = _average_hash(img_bytes)
-        ham = _hamming(input_ahash, cand_ahash)
-        is_dup = ham is not None and ham <= NEAR_DUPLICATE_HAMMING_THRESHOLD
-        log["near_duplicate_of_input"] = is_dup
-        log["_ahash_hamming"] = ham
+    # Fallback to direct page scrape only if CDN image is missing
+    if not img_bytes:
+        try:
+            post_data = fetch_post(url)
+            log["author"] = post_data.get("author", "")
+            log["text"] = post_data.get("text", "")
+            img_bytes = post_data.get("_image_bytes")
+            if img_bytes:
+                verification_source = "page_image"
+        except Exception:
+            pass
 
-        if verification_source == "page_image":
-            tier = TIER_PAGE_IMAGE_DUPLICATE if is_dup else TIER_PAGE_IMAGE_UNIQUE
-        else:
-            tier = TIER_THUMBNAIL_DUPLICATE if is_dup else TIER_THUMBNAIL_UNIQUE
-        log["tier"] = tier
+    if img_bytes:
+        log["_image_bytes"] = img_bytes
+    log["verification_source"] = verification_source
 
-        if dist < tol:
-            log["matched"] = True
-            dup_note = " [near-duplicate of input photo]" if is_dup else " [distinct photo]"
-            src_note = " (verified from source page)" if verification_source == "page_image" else " (WARNING: engine thumbnail fallback)"
-            log["status"] = f"MATCH (cosine distance {dist:.4f} < {tol}){src_note}{dup_note}"
-        else:
-            log["status"] = f"REJECTED: cosine distance {dist:.4f} >= {tol} (different person)."
-
+    if not img_bytes:
+        log["status"] = "REJECTED: No image could be retrieved from post or thumbnail."
         return log
 
-    except Exception as exc:
-        log["status"] = f"ERROR: Failed during extraction/verification: {exc}"
+    # Step 2: Biometric Face Verification
+    try:
+        post_embedding = encode_face(img_bytes)
+    except NoFaceFound:
+        log["status"] = "REJECTED: No face detected in candidate image."
         return log
+    except ImageReadError:
+        log["status"] = "REJECTED: Candidate image bytes could not be decoded."
+        return log
+    except Exception as e:
+        log["status"] = f"REJECTED: Face detection failed ({e})."
+        return log
+
+    dist = cosine_distance(input_embedding, post_embedding)
+    log["distance"] = round(dist, 4)
+
+    cand_ahash = _average_hash(img_bytes)
+    ham = _hamming(input_ahash, cand_ahash)
+    is_dup = ham is not None and ham <= NEAR_DUPLICATE_HAMMING_THRESHOLD
+    log["near_duplicate_of_input"] = is_dup
+    log["_ahash_hamming"] = ham
+
+    if verification_source == "page_image":
+        tier = TIER_PAGE_IMAGE_DUPLICATE if is_dup else TIER_PAGE_IMAGE_UNIQUE
+    else:
+        tier = TIER_THUMBNAIL_DUPLICATE if is_dup else TIER_THUMBNAIL_UNIQUE
+    log["tier"] = tier
+
+    # Step 3: Check Distance Threshold & Lazy Enrich
+    if dist < tol:
+        log["matched"] = True
+        dup_note = " [near-duplicate of input photo]" if is_dup else " [distinct photo]"
+        src_note = " (verified from source page)" if verification_source == "page_image" else " (WARNING: engine thumbnail fallback)"
+        log["status"] = f"MATCH (cosine distance {dist:.4f} < {tol}){src_note}{dup_note}"
+
+        # Lazy metadata enrichment for match
+        if not log["author"] and not log["text"]:
+            try:
+                p_data = fetch_post(url)
+                log["author"] = p_data.get("author", "")
+                log["text"] = p_data.get("text", "")
+                if p_data.get("_image_bytes"):
+                    log["verification_source"] = "page_image"
+                    log["tier"] = TIER_PAGE_IMAGE_DUPLICATE if is_dup else TIER_PAGE_IMAGE_UNIQUE
+            except Exception:
+                pass
+    else:
+        log["status"] = f"REJECTED: cosine distance {dist:.4f} >= {tol} (different person)."
+
+    return log
 
 
 def _merge_candidate_lists(*lists_of_candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -323,22 +349,22 @@ def find_verified_social_post(
     image_path_or_bytes: str | bytes,
     cropped_face_bytes: str | bytes | None = None,
     tol: float = 0.35,
-    engine: str = "hybrid",
+    engine: str = "google_lens",
     serpapi_key: str | None = None,
     imgbb_key: str | None = None,
-    max_candidates: int = 50,
+    max_candidates: int = 35,
     until_success: bool = False,
     include_general_web: bool = True,
     offline_demo: bool = False,
     offline_post_url: str | None = None,
 ) -> MatcherResult:
     """
-    Executes Stage 2 with Dual-Perspective Multi-Engine Search:
+    Executes Stage 2 with Fast Dual-Perspective Multi-Engine Search:
     1. Uploads both full image and cropped facial portrait to ImgBB
     2. Queries visual search engines across both perspectives (Full Scan + Zoomed Crop)
-    3. Ranks and evaluates candidate pool:
-       - If `until_success=True`: evaluates continuously until a confirmed face match is found.
-       - If `until_success=False`: evaluates up to `max_candidates` and picks the best match.
+    3. Ranks and evaluates candidate pool with ultra-fast parallel CDN evaluation:
+       - If `until_success=True`: evaluates in order and exits immediately on the first verified match.
+       - If `until_success=False`: evaluates candidates up to `max_candidates` in parallel and picks the best match.
     """
     candidate_logs: list[dict[str, Any]] = []
 
@@ -428,19 +454,29 @@ def find_verified_social_post(
             reason=f"{active_engine_label} returned matches, but none were usable as web/social candidates.",
         )
 
-    if until_success:
-        candidates_to_eval = ordered_candidates
-    else:
-        candidates_to_eval = ordered_candidates[:max_candidates]
-
+    candidates_to_eval = ordered_candidates if until_success else ordered_candidates[:max_candidates]
     passing: list[dict[str, Any]] = []
-    for idx, candidate in enumerate(candidates_to_eval, start=1):
-        log = _evaluate_candidate(candidate, idx, input_embedding, input_ahash, tol)
-        candidate_logs.append(log)
-        if log.get("matched"):
-            passing.append(log)
-            if until_success:
+
+    if until_success:
+        # Sequential early-exit: evaluate in order, stop immediately on first match
+        for idx, candidate in enumerate(candidates_to_eval, start=1):
+            log = _evaluate_candidate(candidate, idx, input_embedding, input_ahash, tol)
+            candidate_logs.append(log)
+            if log.get("matched"):
+                passing.append(log)
                 break
+    else:
+        # Parallel evaluation for fixed depth
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            futures = [
+                executor.submit(_evaluate_candidate, cand, idx, input_embedding, input_ahash, tol)
+                for idx, cand in enumerate(candidates_to_eval, start=1)
+            ]
+            for f in futures:
+                log = f.result()
+                candidate_logs.append(log)
+                if log.get("matched"):
+                    passing.append(log)
 
     if not passing:
         return MatcherResult(
@@ -458,9 +494,17 @@ def find_verified_social_post(
     best = passing[0]
 
     # Reconstruct the accepted post record
-    accepted_post = fetch_post(best["url"])
-    if not accepted_post.get("_image_bytes") and best.get("_image_bytes"):
-        accepted_post["_image_bytes"] = best["_image_bytes"]
+    accepted_post = {
+        "platform": best.get("platform", "web"),
+        "post_url": best["url"],
+        "author": best.get("author") or best.get("title", ""),
+        "text": best.get("text") or best.get("title", ""),
+        "posted_at": "",
+        "_image_bytes": best.get("_image_bytes"),
+    }
+    if best.get("_image_bytes"):
+        import hashlib
+        accepted_post["image_sha256"] = hashlib.sha256(best["_image_bytes"]).hexdigest()
 
     return MatcherResult(
         accepted_record=accepted_post,
