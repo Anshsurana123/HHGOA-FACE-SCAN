@@ -1165,6 +1165,20 @@
         tblCandidatesBody.appendChild(tr);
 
         // 2. Append Modal Rich Card
+        let sourceBadge = "";
+        if (cand.verification_source === "page_image") {
+          sourceBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalGreen/10 border border-signalGreen/60 text-signalGreen font-semibold">PAGE IMAGE</span>`;
+        } else if (cand.verification_source === "lens_thumbnail_fallback") {
+          sourceBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalYellow/10 border border-signalYellow/60 text-signalYellow font-semibold">THUMBNAIL FALLBACK</span>`;
+        }
+
+        let dupBadge = "";
+        if (cand.near_duplicate_of_input === true) {
+          dupBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalYellow/10 border border-signalYellow/60 text-signalYellow">MIRRORED PHOTO</span>`;
+        } else if (cand.near_duplicate_of_input === false) {
+          dupBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalGreen/10 border border-signalGreen/60 text-signalGreen">DISTINCT PHOTO</span>`;
+        }
+
         const card = document.createElement("div");
         card.className = `p-4 rounded-md border ${isMatched ? 'border-signalGreen/50 bg-surfaceElevated' : 'border-border bg-bg'} flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:border-signalGreen/40 transition-colors`;
         card.innerHTML = `
@@ -1174,6 +1188,8 @@
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-xs font-bold font-mono text-textMuted">#${cand.position || (idx + 1)}</span>
                 <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-surface border border-border text-textPrimary uppercase font-bold">${cand.platform || "WEB"}</span>
+                ${sourceBadge}
+                ${dupBadge}
                 <span class="text-xs font-bold text-textPrimary truncate max-w-sm">${cand.title || "Social Media Post"}</span>
               </div>
               <a href="${cand.url}" target="_blank" class="text-[11px] text-textMuted hover:text-signalGreen hover:underline truncate block" title="${cand.url}">

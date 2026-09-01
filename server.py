@@ -40,7 +40,7 @@ from chain.anchor import (
     hash_to_bytes32,
 )
 from chain.local_chain import LocalBlockchain
-from chain.web3_client import Web3Client
+from chain.web3_client import Web3Client, PolygonAmoyClient
 
 # Initialize directories
 BASE_DIR = Path(__file__).resolve().parent
@@ -233,7 +233,7 @@ async def run_pipeline(
             tol=tolerance,
             serpapi_key=serpapi_key,
             imgbb_key=imgbb_key,
-            max_candidates=6,
+            max_candidates=25,
             offline_demo=offline_demo,
         )
         elapsed_search = time.time() - start_search_t
@@ -349,8 +349,9 @@ async def run_pipeline(
             "explorer_url": None,
             "status_label": f"Local PoW Block #{receipt.get('block_index')}",
         })
-        log(f"Anchored in Local PoW Blockchain: Block #{receipt.get('block_index')}, Hash: {str(receipt.get('block_hash'))[:16]}... Nonce: {receipt.get('nonce')}")
-    else:
+        log(f"Anchored onto Local PoW Blockchain: Block #{receipt.get('block_index')}, Hash {receipt.get('block_hash')[:16]}...")
+
+    elif network == "amoy":
         try:
             client = PolygonAmoyClient()
             receipt = client.anchor(
@@ -358,23 +359,18 @@ async def run_pipeline(
                 post_url=accepted_post.get("post_url", "")
             )
             anchor_info.update({
-                "contract_address": receipt["contract_address"],
-                "tx_hash": receipt["tx_hash"],
-                "block_number": receipt["block_number"],
-                "explorer_url": receipt["explorer_url"],
-                "status_label": f"Polygon Amoy Block #{receipt['block_number']}",
+                "tx_hash": receipt.get("tx_hash"),
+                "block_number": receipt.get("block_number"),
+                "contract_address": client.contract_address,
+                "explorer_url": receipt.get("explorer_url"),
+                "status_label": f"Polygon Amoy Tx {receipt.get('tx_hash')[:10]}...",
             })
-            log(f"Anchored on Polygon Amoy: Block #{receipt['block_number']}, Tx: {receipt['tx_hash'][:18]}...")
+            log(f"Anchored onto Polygon Amoy: Tx {receipt.get('tx_hash')}")
         except Exception as exc:
             log(f"ERROR: Polygon Amoy anchoring failed: {exc}")
             return JSONResponse(
                 status_code=500,
-                content={
-                    "success": False,
-                    "error": f"Blockchain anchoring failed on Polygon Amoy: {exc}",
-                    "logs": logs,
-                    "stage": 3,
-                }
+                content={"success": False, "error": f"Polygon Amoy anchoring failed: {exc}", "logs": logs, "stage": 3},
             )
 
     # Save full verified record file
