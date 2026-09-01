@@ -1,0 +1,90 @@
+{
+  "address": "0x80140BdB94D3808CbcD06f79D4fF3Faa3f591362",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "contentHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "postUrl",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "at",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "by",
+          "type": "address"
+        }
+      ],
+      "name": "Anchored",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "contentHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "postUrl",
+          "type": "string"
+        }
+      ],
+      "name": "anchor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "anchors",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "anchoredAt",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "by",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "postUrl",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "network": "amoy",
+  "chainId": 80002,
+  "deployer": "0x2De14c641A9B8c6570Ac6633cF9983dD981C519f",
+  "deploymentTx": "31cfe03140f9cbef1fe9ebd35f707d7d11fe7645a526034edeb6e3f996b5c424",
+  "blockNumber": 46418389,
+  "deployedAt": "2026-09-01T04:27:08Z",
+  "explorerUrl": "https://amoy.polygonscan.com/address/0x80140BdB94D3808CbcD06f79D4fF3Faa3f591362"
+}
