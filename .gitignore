@@ -1,0 +1,25 @@
+# Environment and secrets
+.env
+.env.txt
+
+# Outputs and runtime data
+out/
+data/
+
+# Python cache and virtualenvs
+__pycache__/
+*.py[cod]
+*.class
+.venv/
+env/
+venv/
+
+# Pytest and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
