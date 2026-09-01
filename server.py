@@ -133,6 +133,7 @@ async def run_pipeline(
     engine: str = Form("google_lens"),
     max_candidates: int = Form(35),
     until_success: bool = Form(False),
+    manual_crop: bool = Form(False),
     offline_demo: bool = Form(False),
 ):
     """
@@ -147,7 +148,7 @@ async def run_pipeline(
         logs.append(f"[{timestamp}] {msg}")
 
     depth_label = "TILL_SUCCESS (Full Pool)" if until_success else str(max_candidates)
-    log(f"INITIATING PIPELINE: network={network.upper()}, engine={engine.upper()}, depth={depth_label}, tolerance={tolerance:.2f}, offline={offline_demo}")
+    log(f"INITIATING PIPELINE: network={network.upper()}, engine={engine.upper()}, depth={depth_label}, tolerance={tolerance:.2f}, manual_crop={manual_crop}, offline={offline_demo}")
 
     # Step 0: Read image bytes
     image_bytes: bytes = b""
@@ -182,24 +183,44 @@ async def run_pipeline(
     # =========================================================================
     # STAGE 1: Face Detection & Focused Facial Extraction
     # =========================================================================
-    log("--- STAGE 1: Face Identification & Facial Crop Extraction ---")
+    log("--- STAGE 1: Face Identification & Facial Feature Extraction ---")
     start_t = time.time()
     try:
-        cropped_face_bytes, embedding, face_meta = extract_face_crop(image_bytes, margin=0.35)
-        elapsed_face = time.time() - start_t
-        total_faces = face_meta.get("total_faces_detected", 1)
-        score = face_meta.get("det_score") or face_meta.get("score") or 0.0
-        face_meta["score"] = score
-        face_meta["total_faces"] = total_faces
-        
-        # Save cropped face to out/cropped_face.jpg
-        crop_path = OUT_DIR / "cropped_face.jpg"
-        crop_path.write_bytes(cropped_face_bytes)
-        cropped_face_url = "/out/cropped_face.jpg"
+        if manual_crop:
+            # User manually framed the face — skip secondary auto-crop to prevent altering user selection
+            cropped_face_bytes = image_bytes
+            embedding, face_meta = encode_face_with_meta(image_bytes)
+            elapsed_face = time.time() - start_t
+            total_faces = face_meta.get("total_faces_detected", 1)
+            score = face_meta.get("det_score") or face_meta.get("score") or 0.0
+            face_meta["score"] = score
+            face_meta["total_faces"] = total_faces
+            face_meta["manual_crop"] = True
 
-        log(f"InsightFace detected {total_faces} face(s) in {elapsed_face:.2f}s.")
-        log(f"Primary face bbox: {face_meta.get('bbox')}, confidence: {score:.4f}")
-        log(f"Extracted focused facial crop ({len(cropped_face_bytes)} bytes) for reverse image search.")
+            # Save exact manual crop to out/cropped_face.jpg
+            crop_path = OUT_DIR / "cropped_face.jpg"
+            crop_path.write_bytes(cropped_face_bytes)
+            cropped_face_url = "/out/cropped_face.jpg"
+
+            log(f"Manual Crop Mode: Preserved user-framed region ({len(cropped_face_bytes)} bytes).")
+            log(f"InsightFace confirmed facial embedding in {elapsed_face:.2f}s (confidence: {score:.4f}).")
+        else:
+            # Automatic face detection and bounding box crop with margin
+            cropped_face_bytes, embedding, face_meta = extract_face_crop(image_bytes, margin=0.35)
+            elapsed_face = time.time() - start_t
+            total_faces = face_meta.get("total_faces_detected", 1)
+            score = face_meta.get("det_score") or face_meta.get("score") or 0.0
+            face_meta["score"] = score
+            face_meta["total_faces"] = total_faces
+            
+            # Save cropped face to out/cropped_face.jpg
+            crop_path = OUT_DIR / "cropped_face.jpg"
+            crop_path.write_bytes(cropped_face_bytes)
+            cropped_face_url = "/out/cropped_face.jpg"
+
+            log(f"InsightFace detected {total_faces} face(s) in {elapsed_face:.2f}s.")
+            log(f"Primary face bbox: {face_meta.get('bbox')}, confidence: {score:.4f}")
+            log(f"Extracted focused facial crop ({len(cropped_face_bytes)} bytes) for reverse image search.")
     except NoFaceFound:
         log("ERROR: No human face detected in the input scan.")
         return JSONResponse(

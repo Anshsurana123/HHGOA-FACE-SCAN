@@ -399,9 +399,9 @@ def find_verified_social_post(
     # 1. Upload Full Image
     full_imgbb_url = upload_to_imgbb(image_path_or_bytes, api_key=imgbb_key)
     
-    # 2. Upload Cropped Face if provided
+    # 2. Upload Cropped Face if provided and distinct
     crop_imgbb_url = None
-    if cropped_face_bytes is not None:
+    if cropped_face_bytes is not None and cropped_face_bytes != image_path_or_bytes:
         try:
             crop_imgbb_url = upload_to_imgbb(cropped_face_bytes, api_key=imgbb_key)
         except Exception:

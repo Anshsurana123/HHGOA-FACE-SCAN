@@ -1066,6 +1066,7 @@
     let selectedImageFile = null;
     let originalImageFile = null;
     let originalImageDataUrl = null;
+    let isManuallyCropped = false;
     let cropperInstance = null;
     let selectedSampleId = null;
     let activeNetwork = "local";
@@ -1360,6 +1361,7 @@
       if (!file) return;
       originalImageFile = file;
       selectedImageFile = file;
+      isManuallyCropped = false;
       selectedSampleId = null;
 
       const uploadFileName = document.getElementById("uploadFileName");
@@ -1387,6 +1389,7 @@
       selectedImageFile = null;
       originalImageFile = null;
       originalImageDataUrl = null;
+      isManuallyCropped = false;
       selectedSampleId = null;
       fileInput.value = "";
       lastRecordPayload = null;
@@ -1563,6 +1566,7 @@
           const baseName = origName.replace(/\.[^/.]+$/, "");
           const croppedFile = new File([blob], `${baseName}_cropped.jpg`, { type: "image/jpeg" });
           selectedImageFile = croppedFile;
+          isManuallyCropped = true;
 
           const croppedUrl = URL.createObjectURL(blob);
           imgPreview.src = croppedUrl;
@@ -1587,6 +1591,7 @@
         e.stopPropagation();
         if (!originalImageFile || !originalImageDataUrl) return;
         selectedImageFile = originalImageFile;
+        isManuallyCropped = false;
         imgPreview.src = originalImageDataUrl;
         imgSourceDisplay.src = originalImageDataUrl;
 
@@ -1659,6 +1664,7 @@
       formData.append("engine", activeEngine);
       formData.append("max_candidates", depthSlider.value);
       formData.append("until_success", isTillSuccess ? "true" : "false");
+      formData.append("manual_crop", isManuallyCropped ? "true" : "false");
 
       try {
         // Stage 2 active after a brief moment
@@ -1699,7 +1705,7 @@
           inputFaceMeta.textContent = `Score: ${(scoreVal * 100).toFixed(0)}%`;
         }
 
-        if (data.cropped_face_url) {
+        if (data.cropped_face_url && !isManuallyCropped) {
           imgSourceDisplay.src = `${data.cropped_face_url}?t=${Date.now()}`;
           imgSourceDisplay.classList.remove("hidden");
           imgSourcePlaceholder.classList.add("hidden");
