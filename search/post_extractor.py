@@ -27,6 +27,8 @@ ALLOWED_DOMAINS = [
     "threads.net",
     "pinterest.com",
     "tiktok.com",
+    "twstalker.com",
+    "nitter.net",
 ]
 
 USER_AGENT = (
@@ -37,14 +39,29 @@ USER_AGENT = (
 
 
 def normalize_url(url: str) -> str:
-    """Strips ephemeral query parameters (like utm tracking) while preserving canonical post path."""
+    """Strips tracking parameters and normalizes regional subdomains (e.g. in.linkedin.com -> www.linkedin.com)."""
     parsed = urlparse(url)
+    netloc = parsed.netloc.lower()
+    if ":" in netloc:
+        netloc = netloc.split(":")[0]
+
+    # Normalize regional LinkedIn (e.g. in.linkedin.com -> www.linkedin.com)
+    if "linkedin.com" in netloc:
+        netloc = "www.linkedin.com"
+
+    # Normalize Twitter mirrors (e.g. twstalker.com/Username -> x.com/Username)
+    if "twstalker.com" in netloc or "nitter.net" in netloc:
+        path_parts = [p for p in parsed.path.split("/") if p]
+        if path_parts:
+            username = path_parts[0]
+            return f"https://x.com/{username}"
+
     allowed_params = []
     for k, v in parse_qsl(parsed.query):
-        if not k.startswith("utm_") and k not in ("s", "t", "ref_src", "fbclid", "igshid"):
+        if not k.startswith("utm_") and k not in ("s", "t", "ref_src", "fbclid", "igshid", "trk", "originalSubdomain"):
             allowed_params.append((k, v))
     new_query = urlencode(allowed_params)
-    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, ""))
+    return urlunparse((parsed.scheme or "https", netloc, parsed.path, parsed.params, new_query, ""))
 
 
 def get_social_platform(url: str) -> str | None:
@@ -54,10 +71,13 @@ def get_social_platform(url: str) -> str | None:
     if ":" in netloc:
         netloc = netloc.split(":")[0]
 
+    if "twstalker.com" in netloc or "nitter.net" in netloc:
+        return "x"
+
     for domain in ALLOWED_DOMAINS:
         if netloc == domain or netloc.endswith("." + domain):
             name = domain.split(".")[0]
-            return "x" if name == "twitter" else name
+            return "x" if name in ("twitter", "twstalker", "nitter") else name
     return None
 
 

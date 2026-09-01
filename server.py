@@ -130,7 +130,7 @@ async def run_pipeline(
     sample_id: str = Form(None),
     network: str = Form("local"),
     tolerance: float = Form(0.35),
-    engine: str = Form("yandex"),
+    engine: str = Form("google_lens"),
     max_candidates: int = Form(35),
     until_success: bool = Form(False),
     offline_demo: bool = Form(False),

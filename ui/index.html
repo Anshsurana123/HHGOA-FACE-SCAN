@@ -203,17 +203,17 @@
       <div class="flex flex-col gap-2">
         <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">3. Search Engine</label>
         <div class="grid grid-cols-3 gap-1 p-1 rounded bg-bg border border-border">
-          <button id="btnEngineYandex" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen" title="Industry standard for face search">
-            Yandex
-          </button>
-          <button id="btnEngineLens" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary" title="Google Lens visual search">
+          <button id="btnEngineLens" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen" title="Google Lens Dual-Perspective visual search">
             Lens
           </button>
-          <button id="btnEngineHybrid" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary" title="Combines Yandex + Google Lens">
+          <button id="btnEngineYandex" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary" title="Yandex Images visual search">
+            Yandex
+          </button>
+          <button id="btnEngineHybrid" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary" title="Combines Google Lens + Yandex">
             Hybrid
           </button>
         </div>
-        <p class="text-[10px] text-textMuted font-mono" id="engineDesc">Yandex Images: 300+ deep visual matches, #1 for human face identification.</p>
+        <p class="text-[10px] text-textMuted font-mono" id="engineDesc">Google Lens: Dual-Perspective (Full Context + Cropped Face) #1 for LinkedIn & X profiles.</p>
       </div>
 
       <!-- SECTION 4: SEARCH DEPTH -->
@@ -443,8 +443,14 @@
               <!-- Post Metadata Readout -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
                 <div class="p-2.5 rounded bg-bg border border-border">
-                  <span class="text-[10px] text-textMuted block">SOURCE POST URL</span>
-                  <a id="linkPostUrl" href="#" target="_blank" class="text-signalGreen hover:underline truncate block mt-0.5">--</a>
+                  <div class="flex justify-between items-center">
+                    <span class="text-[10px] text-textMuted block">SOURCE POST URL</span>
+                    <div class="flex items-center gap-2">
+                      <button id="btnCopyPostUrl" type="button" class="text-[10px] font-mono text-textMuted hover:text-signalGreen cursor-pointer transition-colors" title="Copy URL">Copy</button>
+                      <button id="btnSearchMirror" type="button" class="text-[10px] font-mono text-textMuted hover:text-signalGreen cursor-pointer transition-colors" title="Search on Google">Web Search</button>
+                    </div>
+                  </div>
+                  <a id="linkPostUrl" href="#" target="_blank" rel="noopener noreferrer" class="text-signalGreen hover:underline truncate block mt-0.5">--</a>
                 </div>
                 <div class="p-2.5 rounded bg-bg border border-border">
                   <span class="text-[10px] text-textMuted block">AUTHOR / CHANNEL</span>
@@ -678,7 +684,7 @@
     let selectedImageFile = null;
     let selectedSampleId = null;
     let activeNetwork = "local";
-    let activeEngine = "yandex";
+    let activeEngine = "google_lens";
     let isTillSuccess = false;
     let isRunning = false;
     let lastRecordPayload = null;
@@ -1422,6 +1428,29 @@
       btnCopyModalJson.textContent = "COPIED!";
       setTimeout(() => (btnCopyModalJson.textContent = orig), 1500);
     });
+
+    // Copy Post URL & Search Mirror Shortcuts
+    const btnCopyPostUrl = document.getElementById("btnCopyPostUrl");
+    const btnSearchMirror = document.getElementById("btnSearchMirror");
+
+    if (btnCopyPostUrl) {
+      btnCopyPostUrl.addEventListener("click", () => {
+        if (linkPostUrl.href && linkPostUrl.href !== "#") {
+          navigator.clipboard.writeText(linkPostUrl.href);
+          const orig = btnCopyPostUrl.textContent;
+          btnCopyPostUrl.textContent = "Copied!";
+          setTimeout(() => (btnCopyPostUrl.textContent = orig), 1500);
+        }
+      });
+    }
+
+    if (btnSearchMirror) {
+      btnSearchMirror.addEventListener("click", () => {
+        const authorText = txtAuthor.textContent !== "--" ? txtAuthor.textContent : "";
+        const query = authorText ? `${authorText} profile` : (linkPostUrl.href || "Siddharth Panchal");
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, "_blank");
+      });
+    }
 
     // Check Chain Status on Load
     window.addEventListener("DOMContentLoaded", async () => {
