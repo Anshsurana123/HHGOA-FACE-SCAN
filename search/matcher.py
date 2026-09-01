@@ -499,19 +499,25 @@ def find_verified_social_post(
     except Exception:
         enriched = {}
 
-    accepted_post = {
-        "platform": best.get("platform", "web"),
-        "post_url": best["url"],
-        "author": enriched.get("author") or best.get("author") or best.get("title", ""),
-        "text": enriched.get("text") or best.get("text") or best.get("title", ""),
-        "posted_at": enriched.get("posted_at", ""),
-        "_image_bytes": enriched.get("_image_bytes") or best.get("_image_bytes"),
-    }
-    if enriched.get("image_sha256"):
-        accepted_post["image_sha256"] = enriched["image_sha256"]
-    elif accepted_post.get("_image_bytes"):
-        import hashlib
-        accepted_post["image_sha256"] = hashlib.sha256(accepted_post["_image_bytes"]).hexdigest()
+    if enriched and enriched.get("post_url"):
+        accepted_post = dict(enriched)
+        if not accepted_post.get("_image_bytes") and best.get("_image_bytes"):
+            accepted_post["_image_bytes"] = best["_image_bytes"]
+        if not accepted_post.get("image_sha256") and accepted_post.get("_image_bytes"):
+            import hashlib
+            accepted_post["image_sha256"] = hashlib.sha256(accepted_post["_image_bytes"]).hexdigest()
+    else:
+        accepted_post = {
+            "platform": best.get("platform", "web"),
+            "post_url": best["url"],
+            "author": best.get("author", ""),
+            "text": best.get("text") or best.get("title", ""),
+            "posted_at": best.get("posted_at", ""),
+            "_image_bytes": best.get("_image_bytes"),
+        }
+        if best.get("_image_bytes"):
+            import hashlib
+            accepted_post["image_sha256"] = hashlib.sha256(best["_image_bytes"]).hexdigest()
 
     return MatcherResult(
         accepted_record=accepted_post,
