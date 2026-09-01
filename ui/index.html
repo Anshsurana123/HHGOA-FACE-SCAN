@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HH-FaceChain Verification Console</title>
+
+  <!-- Google Fonts: Space Grotesk & IBM Plex Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            bg: "#0E1116",
+            surface: "#14181F",
+            surfaceElevated: "#1B202A",
+            border: "#1F242C",
+            borderActive: "#2BD576",
+            textPrimary: "#E8EAED",
+            textSecondary: "#869586",
+            textMuted: "#6B7280",
+            signalGreen: "#2BD576",
+            signalRed: "#F0564A",
+            signalYellow: "#EAB308",
+          },
+          fontFamily: {
+            sans: ["'Space Grotesk'", "sans-serif"],
+            mono: ["'IBM Plex Mono'", "monospace"],
+          },
+          borderRadius: {
+            sm: "4px",
+            DEFAULT: "6px",
+            md: "8px",
+            lg: "8px",
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* Custom Lab Terminal Scrollbar & Grid */
+    body {
+      background-color: #0E1116;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(43, 213, 118, 0.03) 0%, transparent 70%),
+        linear-gradient(rgba(31, 36, 44, 0.3) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(31, 36, 44, 0.3) 1px, transparent 1px);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
+      color: #E8EAED;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0E1116;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1F242C;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2BD576;
+    }
+
+    .border-hairline {
+      border: 1px solid #1F242C;
+    }
+
+    .font-mono {
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* Pulse animation for active step */
+    @keyframes pulse-green {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.05); }
+    }
+    .pulse-active {
+      animation: pulse-green 1.5s infinite ease-in-out;
+    }
+
+    /* Scanline effect for video/images */
+    .scanline-overlay {
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.25),
+        rgba(0, 0, 0, 0.25) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+    }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col selection:bg-signalGreen selection:text-bg text-sm">
+
+  <!-- TOP APP HEADER -->
+  <header class="h-14 border-b border-border bg-surface flex items-center justify-between px-6 shrink-0 z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded border border-signalGreen/40 bg-signalGreen/10 flex items-center justify-center">
+        <svg class="w-4 h-4 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-base font-bold tracking-wider text-textPrimary uppercase flex items-center gap-2">
+          HH-FaceChain <span class="text-xs px-1.5 py-0.5 rounded bg-border text-signalGreen font-mono font-medium">CONSOLE v2.0.4</span>
+        </h1>
+      </div>
+    </div>
+
+    <!-- Node status readouts -->
+    <div class="flex items-center gap-6 text-xs font-mono">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-signalGreen animate-ping"></span>
+        <span class="w-2 h-2 rounded-full bg-signalGreen -ml-4"></span>
+        <span class="text-textMuted">NODE:</span>
+        <span class="text-textPrimary" id="topNodeStatus">127.0.0.1:8000</span>
+      </div>
+      <div class="hidden md:flex items-center gap-2">
+        <span class="text-textMuted">CHAIN:</span>
+        <span class="text-signalGreen" id="topActiveChain">LOCAL (POW)</span>
+      </div>
+      <div class="hidden lg:flex items-center gap-2">
+        <span class="text-textMuted">ENGINE:</span>
+        <span class="text-textPrimary">buffalo_l (512-d)</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- WORKSPACE BODY -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- LEFT SIDEBAR: CONTROL & SCAN INPUT (~320px) -->
+    <aside class="w-80 border-r border-border bg-surface flex flex-col shrink-0 overflow-y-auto p-5 gap-5 z-10">
+
+      <!-- SECTION 1: SCAN SOURCE -->
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">1. Input Scan</label>
+          <button id="btnClearImage" class="text-xs text-textMuted hover:text-signalRed font-mono hidden">RESET</button>
+        </div>
+
+        <!-- Dropzone Container -->
+        <div id="dropzone" class="border-hairline border-dashed rounded-md bg-bg/70 hover:border-signalGreen/50 transition-colors p-4 flex flex-col items-center justify-center cursor-pointer min-h-[160px] relative overflow-hidden group">
+          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" class="hidden" />
+
+          <!-- Empty Dropzone State -->
+          <div id="dropzoneEmpty" class="flex flex-col items-center text-center gap-2 pointer-events-none">
+            <svg class="w-8 h-8 text-textSecondary group-hover:text-signalGreen transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p class="text-xs text-textPrimary font-medium">Drop face photo or <span class="text-signalGreen underline">browse</span></p>
+            <p class="text-[11px] text-textMuted font-mono">JPG, PNG, WEBP &bull; Max 10MB</p>
+          </div>
+
+          <!-- Preview State -->
+          <div id="dropzonePreview" class="hidden w-full h-full flex flex-col items-center relative">
+            <img id="imgPreview" src="" alt="Scan Preview" class="max-h-40 w-auto rounded border border-border object-cover" />
+            <div class="absolute top-1 right-1 bg-bg/80 border border-border px-1.5 py-0.5 rounded text-[10px] font-mono text-signalGreen" id="previewMeta">SCAN READY</div>
+          </div>
+        </div>
+
+        <!-- Preset Public Figures -->
+        <div class="flex flex-col gap-1 mt-1">
+          <label class="text-[11px] font-mono text-textMuted uppercase">Or select test scan:</label>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button class="btn-sample px-2.5 py-1.5 rounded border border-border bg-surfaceElevated hover:border-signalGreen/60 text-xs font-mono text-left truncate transition-colors" data-id="scan1.jpg">
+              &bull; Barack Obama
+            </button>
+            <button class="btn-sample px-2.5 py-1.5 rounded border border-border bg-surfaceElevated hover:border-signalGreen/60 text-xs font-mono text-left truncate transition-colors" data-id="scan2.jpg">
+              &bull; Joe Biden
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: TARGET BLOCKCHAIN -->
+      <div class="flex flex-col gap-2">
+        <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">2. Blockchain Network</label>
+        <div class="grid grid-cols-2 gap-2 p-1 rounded bg-bg border border-border">
+          <button id="btnNetLocal" class="py-1.5 px-2 rounded text-xs font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen">
+            Local PoW
+          </button>
+          <button id="btnNetAmoy" class="py-1.5 px-2 rounded text-xs font-mono font-medium transition-colors text-textMuted hover:text-textPrimary">
+            Polygon Amoy
+          </button>
+        </div>
+        <p class="text-[11px] text-textMuted font-mono" id="netDesc">Pure-Python simulated PoW blockchain (difficulty: '000'). Instant & offline.</p>
+      </div>
+
+      <!-- SECTION 3: MATCH TOLERANCE -->
+      <div class="flex flex-col gap-2">
+        <div class="flex justify-between items-center">
+          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">3. Cosine Tolerance</label>
+          <span id="tolVal" class="text-xs font-mono font-bold text-signalGreen">0.35</span>
+        </div>
+        <input type="range" id="tolSlider" min="0.05" max="0.95" step="0.01" value="0.35" class="w-full accent-signalGreen cursor-pointer" />
+        <div class="flex justify-between text-[10px] font-mono text-textMuted">
+          <span>0.05 (Strict)</span>
+          <span>0.35 (Standard)</span>
+          <span>0.95 (Loose)</span>
+        </div>
+      </div>
+
+      <!-- PRIMARY ACTION BUTTON -->
+      <div class="mt-auto pt-2 flex flex-col gap-2">
+        <button id="btnRunScan" class="w-full py-3 px-4 rounded bg-signalGreen hover:bg-signalGreen/90 active:scale-[0.99] text-bg font-bold tracking-wider uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-none cursor-pointer">
+          <svg id="scanBtnIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <span id="scanBtnText">Scan & Find Matches</span>
+        </button>
+
+        <div class="flex items-center justify-between text-[10px] font-mono text-textMuted px-1">
+          <span>STATUS: IDLE</span>
+          <span>LATENCY: ~1.2s</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN RIGHT VIEWPORT: DASHBOARD & WORKSPACE -->
+    <main class="flex-1 flex flex-col overflow-hidden relative">
+
+      <!-- PIPELINE 3-STEP TRACKER BAR -->
+      <div class="h-14 border-b border-border bg-surface flex items-center justify-between px-6 shrink-0">
+        <div class="flex items-center gap-8 w-full max-w-4xl">
+          
+          <!-- STEP 1 -->
+          <div id="trackerStep1" class="flex items-center gap-3 text-textMuted font-mono text-xs">
+            <div class="step-num w-6 h-6 rounded border border-border bg-surfaceElevated flex items-center justify-center font-bold">1</div>
+            <div>
+              <p class="font-bold text-textPrimary text-xs tracking-wide">FACE DETECTION</p>
+              <p class="text-[10px] text-textMuted step-status">PENDING</p>
+            </div>
+          </div>
+
+          <div class="flex-1 h-px bg-border tracker-line"></div>
+
+          <!-- STEP 2 -->
+          <div id="trackerStep2" class="flex items-center gap-3 text-textMuted font-mono text-xs">
+            <div class="step-num w-6 h-6 rounded border border-border bg-surfaceElevated flex items-center justify-center font-bold">2</div>
+            <div>
+              <p class="font-bold text-textPrimary text-xs tracking-wide">WEB SEARCH & MATCH</p>
+              <p class="text-[10px] text-textMuted step-status">PENDING</p>
+            </div>
+          </div>
+
+          <div class="flex-1 h-px bg-border tracker-line"></div>
+
+          <!-- STEP 3 -->
+          <div id="trackerStep3" class="flex items-center gap-3 text-textMuted font-mono text-xs">
+            <div class="step-num w-6 h-6 rounded border border-border bg-surfaceElevated flex items-center justify-center font-bold">3</div>
+            <div>
+              <p class="font-bold text-textPrimary text-xs tracking-wide">BLOCKCHAIN ANCHOR</p>
+              <p class="text-[10px] text-textMuted step-status">PENDING</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- MAIN CONTENT SCROLLABLE CANVAS -->
+      <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+
+        <!-- DYNAMIC NOTIFICATION BANNERS -->
+        <!-- Banner: Empty State Guide -->
+        <div id="bannerGuide" class="p-4 rounded border border-border bg-surface flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded border border-border bg-surfaceElevated flex items-center justify-center text-signalGreen">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold font-mono uppercase text-textPrimary">READY TO INITIATE PIPELINE</h3>
+              <p class="text-xs text-textMuted">Upload a facial image or pick a test subject to execute reverse social media search and blockchain provenance anchoring.</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono text-textMuted px-2 py-1 rounded bg-surfaceElevated border border-border">SYSTEM IDLE</span>
+        </div>
+
+        <!-- Banner: Verification Passed (Hidden by default) -->
+        <div id="bannerVerified" class="hidden p-4 rounded border border-signalGreen bg-signalGreen/10 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded border border-signalGreen bg-signalGreen flex items-center justify-center text-bg font-bold">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold font-mono uppercase text-signalGreen tracking-wider">VERIFICATION PASSED</h3>
+              <p class="text-xs text-signalGreen/90" id="verifiedBannerText">Live web metadata re-fetched and cryptographically verified against on-chain block anchor.</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold text-signalGreen px-2.5 py-1 rounded bg-bg border border-signalGreen">PROOF VALID</span>
+        </div>
+
+        <!-- Banner: Tamper Detected (Hidden by default) -->
+        <div id="bannerTamper" class="hidden p-4 rounded border border-signalRed bg-signalRed/10 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded border border-signalRed bg-signalRed flex items-center justify-center text-bg font-bold">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold font-mono uppercase text-signalRed tracking-wider">TAMPER DETECTED</h3>
+              <p class="text-xs text-signalRed/90" id="tamperBannerText">Content mutation altered deterministic SHA-256 hash. The blockchain rejected the altered record with cryptographic proof.</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold text-signalRed px-2.5 py-1 rounded bg-bg border border-signalRed">HASH MISMATCH</span>
+        </div>
+
+        <!-- Banner: Error / No Match (Hidden by default) -->
+        <div id="bannerError" class="hidden p-4 rounded border border-signalRed/60 bg-signalRed/10 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded border border-signalRed bg-signalRed flex items-center justify-center text-bg font-bold">!</div>
+            <div>
+              <h3 class="text-xs font-bold font-mono uppercase text-signalRed" id="errorBannerTitle">SCAN NOTICE</h3>
+              <p class="text-xs text-signalRed/90" id="errorBannerText">No matching face met the required tolerance threshold.</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono text-signalRed px-2 py-1 rounded bg-bg border border-signalRed/50">EXIT CODE</span>
+        </div>
+
+        <!-- MIDDLE 2-COLUMN GRID: MATCH RESULT & BLOCKCHAIN PROOF -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- CARD 1: MATCH RESULT (Span 7) -->
+          <div class="lg:col-span-7 rounded-md border border-border bg-surface flex flex-col overflow-hidden">
+            <div class="px-4 py-3 border-b border-border bg-surfaceElevated flex justify-between items-center">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-signalGreen"></span>
+                <h2 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">BIOMETRIC MATCH RESULT</h2>
+              </div>
+              <span id="matchScoreBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-signalGreen">AWAITING SCAN</span>
+            </div>
+
+            <div class="p-5 flex flex-col gap-5">
+              
+              <!-- Side-by-Side Images -->
+              <div class="grid grid-cols-2 gap-4">
+                
+                <!-- Input Face -->
+                <div class="flex flex-col gap-1.5">
+                  <div class="flex justify-between items-center text-[11px] font-mono text-textMuted">
+                    <span>SOURCE INPUT</span>
+                    <span id="inputFaceMeta" class="text-signalGreen">--</span>
+                  </div>
+                  <div class="aspect-square rounded border border-border bg-bg relative overflow-hidden flex items-center justify-center">
+                    <img id="imgSourceDisplay" src="" alt="Input Scan" class="hidden w-full h-full object-cover" />
+                    <div id="imgSourcePlaceholder" class="text-xs font-mono text-textMuted flex flex-col items-center gap-1">
+                      <svg class="w-6 h-6 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                      <span>NO SCAN</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Matched Post Image -->
+                <div class="flex flex-col gap-1.5">
+                  <div class="flex justify-between items-center text-[11px] font-mono text-textMuted">
+                    <span>MATCHED POST</span>
+                    <span id="matchPlatformTag" class="text-textPrimary uppercase">--</span>
+                  </div>
+                  <div class="aspect-square rounded border border-border bg-bg relative overflow-hidden flex items-center justify-center">
+                    <img id="imgMatchDisplay" src="" alt="Matched Post" class="hidden w-full h-full object-cover" />
+                    <div id="imgMatchPlaceholder" class="text-xs font-mono text-textMuted flex flex-col items-center gap-1">
+                      <svg class="w-6 h-6 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      <span>AWAITING SEARCH</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Accuracy Score & Gauge -->
+              <div class="flex flex-col gap-2 p-3.5 rounded bg-surfaceElevated border border-border">
+                <div class="flex justify-between items-baseline">
+                  <span class="text-xs font-mono text-textMuted uppercase">MATCH ACCURACY READOUT</span>
+                  <div class="text-right">
+                    <span id="readoutAccuracy" class="text-2xl font-bold font-mono text-signalGreen">--.-%</span>
+                    <span class="text-xs font-mono text-textMuted ml-1">MATCH</span>
+                  </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full h-2 rounded-sm bg-bg border border-border overflow-hidden">
+                  <div id="barAccuracy" class="h-full bg-signalGreen transition-all duration-500" style="width: 0%;"></div>
+                </div>
+
+                <div class="flex justify-between text-[11px] font-mono text-textMuted">
+                  <span>DISTANCE: <strong id="valDistance" class="text-textPrimary">--</strong></span>
+                  <span>THRESHOLD: <strong id="valTolerance" class="text-textPrimary">&lt; 0.35</strong></span>
+                </div>
+              </div>
+
+              <!-- Post Metadata Readout -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+                <div class="p-2.5 rounded bg-bg border border-border">
+                  <span class="text-[10px] text-textMuted block">SOURCE POST URL</span>
+                  <a id="linkPostUrl" href="#" target="_blank" class="text-signalGreen hover:underline truncate block mt-0.5">--</a>
+                </div>
+                <div class="p-2.5 rounded bg-bg border border-border">
+                  <span class="text-[10px] text-textMuted block">AUTHOR / CHANNEL</span>
+                  <span id="txtAuthor" class="text-textPrimary truncate block mt-0.5">--</span>
+                </div>
+                <div class="md:col-span-2 p-2.5 rounded bg-bg border border-border">
+                  <span class="text-[10px] text-textMuted block">EXTRACTED POST TEXT</span>
+                  <p id="txtPostSnippet" class="text-textPrimary text-xs mt-0.5 line-clamp-2">--</p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- CARD 2: BLOCKCHAIN PROOF (Span 5) -->
+          <div class="lg:col-span-5 rounded-md border border-border bg-surface flex flex-col overflow-hidden">
+            <div class="px-4 py-3 border-b border-border bg-surfaceElevated flex justify-between items-center">
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                <h2 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">BLOCKCHAIN PROOF</h2>
+              </div>
+              <span id="proofStatusBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-textMuted">UNANCHORED</span>
+            </div>
+
+            <div class="p-5 flex-1 flex flex-col justify-between gap-4">
+              <div class="flex flex-col gap-3 text-xs font-mono">
+                
+                <!-- Content Hash -->
+                <div class="p-2.5 rounded bg-bg border border-border">
+                  <div class="flex justify-between items-center mb-1">
+                    <span class="text-[10px] text-textMuted">CANONICAL CONTENT HASH (SHA-256)</span>
+                    <button class="btn-copy text-[10px] text-signalGreen hover:underline" data-target="txtContentHash">COPY</button>
+                  </div>
+                  <span id="txtContentHash" class="text-textPrimary font-mono break-all text-[11px] block">--</span>
+                </div>
+
+                <!-- Block / Tx Hash -->
+                <div class="p-2.5 rounded bg-bg border border-border">
+                  <div class="flex justify-between items-center mb-1">
+                    <span id="lblTxOrBlock" class="text-[10px] text-textMuted">BLOCK HASH / TX HASH</span>
+                    <button class="btn-copy text-[10px] text-signalGreen hover:underline" data-target="txtTxOrBlock">COPY</button>
+                  </div>
+                  <span id="txtTxOrBlock" class="text-textPrimary font-mono break-all text-[11px] block">--</span>
+                </div>
+
+                <!-- Block Height / Timestamp -->
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="p-2.5 rounded bg-bg border border-border">
+                    <span class="text-[10px] text-textMuted block">BLOCK INDEX</span>
+                    <span id="txtBlockIndex" class="text-textPrimary font-bold block mt-0.5">--</span>
+                  </div>
+                  <div class="p-2.5 rounded bg-bg border border-border">
+                    <span class="text-[10px] text-textMuted block">TIMESTAMP</span>
+                    <span id="txtTimestamp" class="text-textPrimary truncate block mt-0.5">--</span>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- ACTION ROW: VERIFY & TAMPER BUTTONS -->
+              <div class="flex flex-col gap-2 pt-2 border-t border-border">
+                <div class="grid grid-cols-2 gap-2">
+                  <button id="btnVerify" disabled class="py-2.5 px-3 rounded border border-signalGreen/40 bg-surfaceElevated hover:bg-signalGreen hover:text-bg text-signalGreen text-xs font-mono font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>Verify Record</span>
+                  </button>
+
+                  <button id="btnTamper" disabled class="py-2.5 px-3 rounded border border-signalRed/40 bg-surfaceElevated hover:bg-signalRed hover:text-bg text-signalRed text-xs font-mono font-bold transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <span>Simulate Tamper</span>
+                  </button>
+                </div>
+
+                <a id="btnExplorer" href="#" target="_blank" class="hidden py-2 px-3 rounded border border-border bg-bg hover:border-signalGreen text-xs font-mono text-center text-textPrimary transition-colors">
+                  View on PolygonScan &rarr;
+                </a>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- CANDIDATE MATCHES TABLE -->
+        <div class="rounded-md border border-border bg-surface flex flex-col overflow-hidden">
+          <div class="px-4 py-3 border-b border-border bg-surfaceElevated flex justify-between items-center">
+            <h2 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">EVALUATED CANDIDATE MATCHES</h2>
+            <span id="candidateCountBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-textMuted">0 CANDIDATES</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs font-mono">
+              <thead>
+                <tr class="border-b border-border text-textMuted bg-bg">
+                  <th class="py-2.5 px-4 font-medium w-14">#</th>
+                  <th class="py-2.5 px-4 font-medium w-28">PLATFORM</th>
+                  <th class="py-2.5 px-4 font-medium">DISCOVERED URL</th>
+                  <th class="py-2.5 px-4 font-medium w-36">COSINE DISTANCE</th>
+                  <th class="py-2.5 px-4 font-medium w-28 text-right">STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="tblCandidatesBody">
+                <tr>
+                  <td colspan="5" class="py-6 text-center text-textMuted font-mono">No scan executed yet. Run a search to populate candidate matches.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- COLLAPSIBLE LOG CONSOLE -->
+        <div class="rounded-md border border-border bg-bg flex flex-col overflow-hidden">
+          <div id="btnToggleLog" class="px-4 py-2.5 border-b border-border bg-surfaceElevated flex justify-between items-center cursor-pointer hover:bg-surface transition-colors select-none">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-signalGreen"></span>
+              <span class="text-xs font-mono font-bold uppercase text-textPrimary">PIPELINE EXECUTION LOGS</span>
+            </div>
+            <div class="flex items-center gap-3 text-xs font-mono text-textMuted">
+              <span id="logCount">0 events</span>
+              <span id="logChevron">&#9660;</span>
+            </div>
+          </div>
+
+          <div id="logConsoleContainer" class="p-4 bg-bg font-mono text-xs text-textSecondary h-44 overflow-y-auto space-y-1 select-text">
+            <p class="text-textMuted">// System initialized. Awaiting user input.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- FOOTER STATUS BAR -->
+      <footer class="h-8 border-t border-border bg-surface flex items-center justify-between px-6 shrink-0 text-[11px] font-mono text-textMuted">
+        <div class="flex items-center gap-4">
+          <span>PIPELINE: <strong class="text-signalGreen">READY</strong></span>
+          <span>MODE: <strong class="text-textPrimary">LAB PRESENTATION</strong></span>
+        </div>
+        <div>
+          <span>HH GOA 2026 &bull; TASK 3 VERIFICATION PIPELINE</span>
+        </div>
+      </footer>
+
+    </main>
+
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // State
+    let selectedImageFile = null;
+    let selectedSampleId = null;
+    let activeNetwork = "local";
+    let isRunning = false;
+    let lastRecordPayload = null;
+
+    // DOM Elements
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("fileInput");
+    const dropzoneEmpty = document.getElementById("dropzoneEmpty");
+    const dropzonePreview = document.getElementById("dropzonePreview");
+    const imgPreview = document.getElementById("imgPreview");
+    const btnClearImage = document.getElementById("btnClearImage");
+    const btnRunScan = document.getElementById("btnRunScan");
+    const scanBtnText = document.getElementById("scanBtnText");
+    const scanBtnIcon = document.getElementById("scanBtnIcon");
+
+    const btnNetLocal = document.getElementById("btnNetLocal");
+    const btnNetAmoy = document.getElementById("btnNetAmoy");
+    const netDesc = document.getElementById("netDesc");
+    const topActiveChain = document.getElementById("topActiveChain");
+
+    const tolSlider = document.getElementById("tolSlider");
+    const tolVal = document.getElementById("tolVal");
+
+    const btnVerify = document.getElementById("btnVerify");
+    const btnTamper = document.getElementById("btnTamper");
+    const btnExplorer = document.getElementById("btnExplorer");
+
+    const bannerGuide = document.getElementById("bannerGuide");
+    const bannerVerified = document.getElementById("bannerVerified");
+    const bannerTamper = document.getElementById("bannerTamper");
+    const bannerError = document.getElementById("bannerError");
+    const verifiedBannerText = document.getElementById("verifiedBannerText");
+    const tamperBannerText = document.getElementById("tamperBannerText");
+    const errorBannerTitle = document.getElementById("errorBannerTitle");
+    const errorBannerText = document.getElementById("errorBannerText");
+
+    const imgSourceDisplay = document.getElementById("imgSourceDisplay");
+    const imgSourcePlaceholder = document.getElementById("imgSourcePlaceholder");
+    const imgMatchDisplay = document.getElementById("imgMatchDisplay");
+    const imgMatchPlaceholder = document.getElementById("imgMatchPlaceholder");
+    const inputFaceMeta = document.getElementById("inputFaceMeta");
+    const matchPlatformTag = document.getElementById("matchPlatformTag");
+    const matchScoreBadge = document.getElementById("matchScoreBadge");
+    const readoutAccuracy = document.getElementById("readoutAccuracy");
+    const barAccuracy = document.getElementById("barAccuracy");
+    const valDistance = document.getElementById("valDistance");
+    const valTolerance = document.getElementById("valTolerance");
+
+    const linkPostUrl = document.getElementById("linkPostUrl");
+    const txtAuthor = document.getElementById("txtAuthor");
+    const txtPostSnippet = document.getElementById("txtPostSnippet");
+
+    const proofStatusBadge = document.getElementById("proofStatusBadge");
+    const txtContentHash = document.getElementById("txtContentHash");
+    const lblTxOrBlock = document.getElementById("lblTxOrBlock");
+    const txtTxOrBlock = document.getElementById("txtTxOrBlock");
+    const txtBlockIndex = document.getElementById("txtBlockIndex");
+    const txtTimestamp = document.getElementById("txtTimestamp");
+
+    const tblCandidatesBody = document.getElementById("tblCandidatesBody");
+    const candidateCountBadge = document.getElementById("candidateCountBadge");
+    const logConsoleContainer = document.getElementById("logConsoleContainer");
+    const logCount = document.getElementById("logCount");
+    const btnToggleLog = document.getElementById("btnToggleLog");
+    const logChevron = document.getElementById("logChevron");
+
+    // Logger
+    function appendLog(msg, colorClass = "text-textSecondary") {
+      const p = document.createElement("p");
+      p.className = colorClass;
+      p.textContent = msg;
+      logConsoleContainer.appendChild(p);
+      logConsoleContainer.scrollTop = logConsoleContainer.scrollHeight;
+      const count = logConsoleContainer.querySelectorAll("p").length;
+      logCount.textContent = `${count} events`;
+    }
+
+    function clearLogs() {
+      logConsoleContainer.innerHTML = "";
+      logCount.textContent = "0 events";
+    }
+
+    // Pipeline Tracker UI
+    function setStepState(stepNum, state, statusText) {
+      const stepEl = document.getElementById(`trackerStep${stepNum}`);
+      if (!stepEl) return;
+      const numEl = stepEl.querySelector(".step-num");
+      const statusEl = stepEl.querySelector(".step-status");
+      statusEl.textContent = statusText;
+
+      numEl.classList.remove("border-signalGreen", "bg-signalGreen", "text-bg", "pulse-active", "border-signalRed", "bg-signalRed");
+
+      if (state === "active") {
+        stepEl.classList.remove("text-textMuted");
+        stepEl.classList.add("text-signalGreen");
+        numEl.classList.add("border-signalGreen", "text-signalGreen", "pulse-active");
+      } else if (state === "done") {
+        stepEl.classList.remove("text-textMuted");
+        stepEl.classList.add("text-signalGreen");
+        numEl.classList.add("bg-signalGreen", "border-signalGreen", "text-bg");
+        numEl.innerHTML = "&#10003;";
+      } else if (state === "failed") {
+        stepEl.classList.remove("text-textMuted");
+        stepEl.classList.add("text-signalRed");
+        numEl.classList.add("bg-signalRed", "border-signalRed", "text-bg");
+        numEl.innerHTML = "&#10007;";
+      } else {
+        stepEl.classList.add("text-textMuted");
+        stepEl.classList.remove("text-signalGreen", "text-signalRed");
+        numEl.textContent = stepNum;
+      }
+    }
+
+    function resetPipelineTracker() {
+      setStepState(1, "pending", "PENDING");
+      setStepState(2, "pending", "PENDING");
+      setStepState(3, "pending", "PENDING");
+    }
+
+    // Hide all dynamic banners
+    function hideBanners() {
+      bannerGuide.classList.add("hidden");
+      bannerVerified.classList.add("hidden");
+      bannerTamper.classList.add("hidden");
+      bannerError.classList.add("hidden");
+    }
+
+    // Tolerance Slider
+    tolSlider.addEventListener("input", (e) => {
+      tolVal.textContent = parseFloat(e.target.value).toFixed(2);
+      valTolerance.textContent = `< ${parseFloat(e.target.value).toFixed(2)}`;
+    });
+
+    // Network Toggle
+    btnNetLocal.addEventListener("click", () => {
+      activeNetwork = "local";
+      btnNetLocal.className = "py-1.5 px-2 rounded text-xs font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen";
+      btnNetAmoy.className = "py-1.5 px-2 rounded text-xs font-mono font-medium transition-colors text-textMuted hover:text-textPrimary";
+      netDesc.textContent = "Pure-Python simulated PoW blockchain (difficulty: '000'). Instant & offline.";
+      topActiveChain.textContent = "LOCAL (POW)";
+      lblTxOrBlock.textContent = "LOCAL BLOCK HASH";
+      appendLog("[CONFIG] Network set to LOCAL SIMULATED BLOCKCHAIN");
+    });
+
+    btnNetAmoy.addEventListener("click", () => {
+      activeNetwork = "amoy";
+      btnNetAmoy.className = "py-1.5 px-2 rounded text-xs font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen";
+      btnNetLocal.className = "py-1.5 px-2 rounded text-xs font-mono font-medium transition-colors text-textMuted hover:text-textPrimary";
+      netDesc.textContent = "Polygon Amoy Testnet (Chain ID 80002). Contract: 0x80140BdB94...";
+      topActiveChain.textContent = "POLYGON AMOY";
+      lblTxOrBlock.textContent = "POLYGON TRANSACTION HASH";
+      appendLog("[CONFIG] Network set to POLYGON AMOY TESTNET (80002)");
+    });
+
+    // File Upload & Drag-Drop Handling
+    dropzone.addEventListener("click", () => fileInput.click());
+
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("border-signalGreen");
+    });
+
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("border-signalGreen");
+    });
+
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("border-signalGreen");
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleFileSelect(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleFileSelect(e.target.files[0]);
+      }
+    });
+
+    function handleFileSelect(file) {
+      selectedImageFile = file;
+      selectedSampleId = null;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        imgPreview.src = e.target.result;
+        dropzoneEmpty.classList.add("hidden");
+        dropzonePreview.classList.remove("hidden");
+        btnClearImage.classList.remove("hidden");
+        imgSourceDisplay.src = e.target.result;
+        imgSourceDisplay.classList.remove("hidden");
+        imgSourcePlaceholder.classList.add("hidden");
+        appendLog(`[INPUT] Loaded user scan: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    btnClearImage.addEventListener("click", () => {
+      selectedImageFile = null;
+      selectedSampleId = null;
+      fileInput.value = "";
+      dropzoneEmpty.classList.remove("hidden");
+      dropzonePreview.classList.add("hidden");
+      btnClearImage.classList.add("hidden");
+      imgSourceDisplay.src = "";
+      imgSourceDisplay.classList.add("hidden");
+      imgSourcePlaceholder.classList.remove("hidden");
+      inputFaceMeta.textContent = "--";
+      appendLog("[INPUT] Cleared input image.");
+    });
+
+    // Sample Presets
+    document.querySelectorAll(".btn-sample").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-id");
+        selectedSampleId = id;
+        selectedImageFile = null;
+        fileInput.value = "";
+        imgPreview.src = `/demo/${id}`;
+        dropzoneEmpty.classList.add("hidden");
+        dropzonePreview.classList.remove("hidden");
+        btnClearImage.classList.remove("hidden");
+        imgSourceDisplay.src = `/demo/${id}`;
+        imgSourceDisplay.classList.remove("hidden");
+        imgSourcePlaceholder.classList.add("hidden");
+        appendLog(`[INPUT] Selected test subject: ${btn.textContent.trim()} (${id})`);
+      });
+    });
+
+    // Copy to clipboard
+    document.querySelectorAll(".btn-copy").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.getAttribute("data-target");
+        const targetEl = document.getElementById(targetId);
+        if (targetEl && targetEl.textContent && targetEl.textContent !== "--") {
+          navigator.clipboard.writeText(targetEl.textContent);
+          const orig = btn.textContent;
+          btn.textContent = "COPIED!";
+          setTimeout(() => (btn.textContent = orig), 1500);
+        }
+      });
+    });
+
+    // Toggle Log Console
+    btnToggleLog.addEventListener("click", () => {
+      logConsoleContainer.classList.toggle("hidden");
+      logChevron.innerHTML = logConsoleContainer.classList.contains("hidden") ? "&#9654;" : "&#9660;";
+    });
+
+    // RUN PIPELINE
+    btnRunScan.addEventListener("click", async () => {
+      if (isRunning) return;
+      if (!selectedImageFile && !selectedSampleId) {
+        hideBanners();
+        bannerError.classList.remove("hidden");
+        errorBannerTitle.textContent = "INPUT REQUIRED";
+        errorBannerText.textContent = "Please upload a facial image or pick one of the sample presets to run the pipeline.";
+        return;
+      }
+
+      isRunning = true;
+      btnRunScan.disabled = true;
+      btnRunScan.classList.add("opacity-70", "cursor-not-allowed");
+      scanBtnText.textContent = "Running Pipeline...";
+      hideBanners();
+      resetPipelineTracker();
+
+      btnVerify.disabled = true;
+      btnTamper.disabled = true;
+      btnExplorer.classList.add("hidden");
+
+      appendLog("==================================================", "text-signalGreen font-bold");
+      appendLog("  INITIATING FACE -> SEARCH -> BLOCKCHAIN PIPELINE", "text-signalGreen font-bold");
+      appendLog("==================================================", "text-signalGreen font-bold");
+
+      // Stage 1 active
+      setStepState(1, "active", "DETECTING...");
+
+      const formData = new FormData();
+      if (selectedImageFile) {
+        formData.append("image", selectedImageFile);
+      } else if (selectedSampleId) {
+        formData.append("sample_id", selectedSampleId);
+      }
+      formData.append("network", activeNetwork);
+      formData.append("tolerance", tolSlider.value);
+
+      try {
+        // Stage 2 active after a brief moment
+        setTimeout(() => {
+          if (isRunning) {
+            setStepState(1, "done", "COMPLETED");
+            setStepState(2, "active", "SEARCHING...");
+          }
+        }, 1200);
+
+        const response = await fetch("/api/run", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        // Print returned logs
+        if (data.logs && Array.isArray(data.logs)) {
+          data.logs.forEach((l) => appendLog(l));
+        }
+
+        if (!response.ok || !data.success) {
+          const errStage = data.stage || 1;
+          setStepState(errStage, "failed", "FAILED");
+          hideBanners();
+          bannerError.classList.remove("hidden");
+          errorBannerTitle.textContent = "PIPELINE HALTED";
+          errorBannerText.textContent = data.error || "An unexpected error occurred during execution.";
+          appendLog(`[ERROR] ${data.error}`, "text-signalRed font-bold");
+          return;
+        }
+
+        // Face Metadata
+        if (data.face) {
+          setStepState(1, "done", "COMPLETED");
+          inputFaceMeta.textContent = `Score: ${(data.face.score * 100).toFixed(0)}%`;
+        }
+
+        // Render Candidates Table
+        renderCandidates(data.candidates || []);
+
+        if (!data.matched) {
+          setStepState(2, "failed", "NO MATCH");
+          hideBanners();
+          bannerError.classList.remove("hidden");
+          errorBannerTitle.textContent = "NO VERIFIED MATCH";
+          errorBannerText.textContent = data.reason || "Google Lens candidates were evaluated, but none satisfied the face tolerance threshold.";
+          matchScoreBadge.textContent = "REJECTED";
+          matchScoreBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-signalRed text-signalRed";
+          readoutAccuracy.textContent = "0.0%";
+          readoutAccuracy.className = "text-2xl font-bold font-mono text-signalRed";
+          barAccuracy.style.width = "0%";
+          barAccuracy.className = "h-full bg-signalRed transition-all duration-500";
+          return;
+        }
+
+        // Success Path!
+        setStepState(2, "done", "COMPLETED");
+        setStepState(3, "done", "ANCHORED");
+
+        lastRecordPayload = data;
+
+        // Render Match Result Card
+        matchPlatformTag.textContent = (data.post.platform || "WEB").toUpperCase();
+        matchScoreBadge.textContent = "MATCH CONFIRMED";
+        matchScoreBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-signalGreen text-signalGreen";
+
+        readoutAccuracy.textContent = `${data.accuracy_pct.toFixed(1)}%`;
+        readoutAccuracy.className = "text-2xl font-bold font-mono text-signalGreen";
+        barAccuracy.style.width = `${data.accuracy_pct}%`;
+        barAccuracy.className = "h-full bg-signalGreen transition-all duration-500";
+        valDistance.textContent = data.cosine_distance.toFixed(4);
+
+        linkPostUrl.href = data.post.post_url;
+        linkPostUrl.textContent = data.post.post_url;
+        txtAuthor.textContent = data.post.author || "N/A (Public Author)";
+        txtPostSnippet.textContent = data.post.text || "No text body extracted.";
+
+        if (data.matched_image_url) {
+          imgMatchDisplay.src = `${data.matched_image_url}?t=${Date.now()}`;
+          imgMatchDisplay.classList.remove("hidden");
+          imgMatchPlaceholder.classList.add("hidden");
+        }
+
+        // Render Blockchain Proof Card
+        proofStatusBadge.textContent = data.anchor.status_label || "ANCHORED";
+        proofStatusBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-signalGreen text-signalGreen";
+        txtContentHash.textContent = data.anchor.content_hash || "--";
+        txtTxOrBlock.textContent = data.anchor.tx_hash || data.anchor.block_hash || "--";
+        txtBlockIndex.textContent = data.anchor.block_number ? `#${data.anchor.block_number}` : (data.anchor.block_index !== undefined ? `#${data.anchor.block_index}` : "--");
+        txtTimestamp.textContent = data.anchor.anchored_at || "--";
+
+        if (data.anchor.explorer_url) {
+          btnExplorer.href = data.anchor.explorer_url;
+          btnExplorer.classList.remove("hidden");
+        } else {
+          btnExplorer.classList.add("hidden");
+        }
+
+        btnVerify.disabled = false;
+        btnTamper.disabled = false;
+
+        hideBanners();
+        bannerVerified.classList.remove("hidden");
+        verifiedBannerText.textContent = `Proven on ${data.anchor.network.toUpperCase()} blockchain: Content Hash ${data.anchor.content_hash.slice(0, 16)}... matched with ${data.accuracy_pct}% accuracy.`;
+
+        appendLog("[SUCCESS] Pipeline completed successfully!", "text-signalGreen font-bold");
+
+      } catch (exc) {
+        hideBanners();
+        bannerError.classList.remove("hidden");
+        errorBannerTitle.textContent = "NETWORK ERROR";
+        errorBannerText.textContent = `Client communication error: ${exc.message}`;
+        appendLog(`[EXCEPTION] ${exc.message}`, "text-signalRed font-bold");
+      } finally {
+        isRunning = false;
+        btnRunScan.disabled = false;
+        btnRunScan.classList.remove("opacity-70", "cursor-not-allowed");
+        scanBtnText.textContent = "Scan & Find Matches";
+      }
+    });
+
+    // Render Candidates Table
+    function renderCandidates(candidates) {
+      candidateCountBadge.textContent = `${candidates.length} CANDIDATES`;
+      tblCandidatesBody.innerHTML = "";
+
+      if (!candidates || candidates.length === 0) {
+        tblCandidatesBody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-textMuted font-mono">No candidate matches returned by search engine.</td></tr>`;
+        return;
+      }
+
+      candidates.forEach((cand, idx) => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-border hover:bg-surfaceElevated transition-colors";
+
+        const distVal = cand.distance !== null && cand.distance !== undefined ? cand.distance.toFixed(4) : "N/A";
+        const isMatched = cand.matched === true;
+        const statusBadge = isMatched
+          ? `<span class="px-2 py-0.5 rounded bg-signalGreen/10 border border-signalGreen text-signalGreen text-[10px]">ACCEPTED</span>`
+          : `<span class="px-2 py-0.5 rounded bg-signalRed/10 border border-signalRed/60 text-signalRed text-[10px]">REJECTED</span>`;
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 text-textMuted">#${cand.position || (idx + 1)}</td>
+          <td class="py-3 px-4 font-bold text-textPrimary uppercase">${cand.platform || "WEB"}</td>
+          <td class="py-3 px-4 text-textPrimary truncate max-w-xs">
+            <a href="${cand.url}" target="_blank" class="hover:text-signalGreen hover:underline truncate block" title="${cand.url}">
+              ${cand.url}
+            </a>
+          </td>
+          <td class="py-3 px-4 font-mono ${isMatched ? "text-signalGreen font-bold" : "text-textMuted"}">${distVal}</td>
+          <td class="py-3 px-4 text-right">${statusBadge}</td>
+        `;
+        tblCandidatesBody.appendChild(tr);
+      });
+    }
+
+    // LIVE VERIFY RECORD ACTION
+    btnVerify.addEventListener("click", async () => {
+      btnVerify.disabled = true;
+      appendLog("[VERIFY] Re-fetching live post and validating on-chain proof...", "text-signalGreen");
+      
+      const formData = new FormData();
+      formData.append("network", activeNetwork);
+
+      try {
+        const res = await fetch("/api/verify", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+
+        hideBanners();
+        if (data.verified) {
+          bannerVerified.classList.remove("hidden");
+          verifiedBannerText.textContent = `LIVE Blockchain Verification Passed! Recomputed Hash (${data.live_hash.slice(0, 16)}...) matches on-chain anchor on ${data.network.toUpperCase()}.`;
+          appendLog(`[PASS] Live Verification Successful on ${data.network.toUpperCase()}! Hash: ${data.live_hash}`, "text-signalGreen font-bold");
+        } else {
+          bannerError.classList.remove("hidden");
+          errorBannerTitle.textContent = "VERIFICATION FAILED";
+          errorBannerText.textContent = data.error || "The live post metadata does not match the anchored hash.";
+          appendLog(`[FAIL] Verification Failed: ${data.error}`, "text-signalRed font-bold");
+        }
+      } catch (exc) {
+        appendLog(`[ERROR] Verify error: ${exc.message}`, "text-signalRed");
+      } finally {
+        btnVerify.disabled = false;
+      }
+    });
+
+    // SIMULATE TAMPER ACTION
+    btnTamper.addEventListener("click", async () => {
+      btnTamper.disabled = true;
+      appendLog("[TAMPER] Mutating post text to demonstrate cryptographic rejection...", "text-signalYellow");
+
+      const formData = new FormData();
+      formData.append("network", activeNetwork);
+
+      try {
+        const res = await fetch("/api/tamper", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+
+        hideBanners();
+        if (data.tamper_detected) {
+          bannerTamper.classList.remove("hidden");
+          tamperBannerText.textContent = `Tampered text ('${data.mutated_text}') produced altered hash (${data.tampered_hash.slice(0, 16)}...). Blockchain rejected the forged hash on ${data.network.toUpperCase()}.`;
+          appendLog(`[TAMPER DETECTED] Original Hash: ${data.original_hash}`, "text-textMuted");
+          appendLog(`[TAMPER DETECTED] Tampered Hash: ${data.tampered_hash}`, "text-signalRed");
+          appendLog(`[TAMPER PROOF] ${data.reason}`, "text-signalRed font-bold");
+        }
+      } catch (exc) {
+        appendLog(`[ERROR] Tamper error: ${exc.message}`, "text-signalRed");
+      } finally {
+        btnTamper.disabled = false;
+      }
+    });
+
+    // Check Chain Status on Load
+    window.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const res = await fetch("/api/chain-status?network=local");
+        const data = await res.json();
+        if (data.status && data.status.integrity_valid) {
+          appendLog(`[CHAIN] Local PoW chain verified: ${data.status.total_blocks} block(s), integrity valid.`);
+        }
+      } catch (e) {
+        // quiet ignore
+      }
+    });
+  </script>
+</body>
+</html>

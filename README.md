@@ -137,7 +137,31 @@ hh-facechain/
 
 ## 4. How to Run
 
-### Command 1: Full End-to-End Pipeline (`run`)
+### Option A: Localhost Presentation UI (Designed with Stitch MCP)
+
+Launch the interactive, lab-instrument-style forensic dashboard on localhost:
+
+```bash
+python server.py
+```
+Then open your browser to **[http://localhost:8000](http://localhost:8000)**.
+
+**Features of the Presentation UI:**
+- **Drag-and-Drop Dropzone & Presets**: Upload any face scan image or click one of the preset public figure buttons (`Barack Obama`, `Joe Biden`).
+- **Interactive Dual Blockchain Toggle**: Switch seamlessly between **Local Simulated PoW Chain** and **Polygon Amoy Testnet**.
+- **Real-Time Tolerance Slider**: Adjust cosine distance matching tolerance (`0.05` strict to `0.95` loose).
+- **Staged 3-Step Pipeline Tracker**: Watch active status progression across `Face ID` -> `Web Search` -> `Blockchain Anchor`.
+- **Side-by-Side Biometric Comparison**: View source input scan alongside the discovered social media post image with large **accuracy readout gauge** (`(1 - cosine_distance) * 100`).
+- **Blockchain Proof Card**: 1-click copy for deterministic canonical SHA-256 content hashes and transaction/block hashes, with direct explorer navigation.
+- **One-Click Live Re-Verification (`Verify Record`)**: Re-fetches the live post and verifies on-chain integrity.
+- **One-Click Tamper Simulation (`Simulate Tamper`)**: Mutates cached text, recalculates SHA-256 digest, and demonstrates instant cryptographic rejection on-chain.
+- **Collapsible Monospace Log Console**: Streams stage-by-stage pipeline logs in real time.
+
+---
+
+### Option B: Command-Line Interface (CLI)
+
+#### Command 1: Full End-to-End Pipeline (`run`)
 
 Runs the complete pipeline (Stage 1 Face ID -> Stage 2 Live Search -> Stage 3 Blockchain Anchor):
 

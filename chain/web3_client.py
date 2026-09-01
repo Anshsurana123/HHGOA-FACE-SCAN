@@ -172,3 +172,27 @@ class Web3Client:
 
         except Exception as exc:
             return False, None, f"Failed to query smart contract: {exc}"
+
+    def get_status(self) -> dict[str, Any]:
+        """Returns connection and contract status."""
+        connected = self.w3.is_connected()
+        latest_block = None
+        if connected:
+            try:
+                latest_block = self.w3.eth.block_number
+            except Exception:
+                pass
+        return {
+            "network": "Polygon Amoy Testnet",
+            "chain_id": 80002,
+            "contract_address": self.contract_address,
+            "active_rpc": self.active_rpc,
+            "connected": connected,
+            "latest_block": latest_block,
+            "wallet_address": self.account.address if self.account else None,
+            "status_message": "Connected to Polygon Amoy testnet." if connected else "Disconnected.",
+        }
+
+
+# Backward compatibility aliases
+PolygonAmoyClient = Web3Client

@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HH-FaceChain Verification Console</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: IBM Plex Mono & Space Grotesk -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Space+Grotesk:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config from Prompt -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-surface": "#e1e2e9",
+                    "secondary-container": "#424750",
+                    "surface-bright": "#1F242C",
+                    "on-secondary": "#2c3139",
+                    "surface-container-low": "#191c21",
+                    "on-background": "#e1e2e9",
+                    "outline-variant": "#3c4a3e",
+                    "background": "#111319",
+                    "on-primary": "#00391a",
+                    "surface-container": "#1d2025",
+                    "on-primary-fixed": "#00210c",
+                    "secondary": "#c2c6d1",
+                    "primary": "#53f28f",
+                    "surface": "#111319",
+                    "tertiary-fixed": "#ffdbcb",
+                    "on-error-container": "#ffdad6",
+                    "on-error": "#690005",
+                    "tertiary-container": "#ffa575",
+                    "on-secondary-fixed-variant": "#424750",
+                    "surface-container-lowest": "#0b0e13",
+                    "on-primary-fixed-variant": "#005228",
+                    "on-tertiary": "#552100",
+                    "secondary-fixed": "#dee2ed",
+                    "tertiary": "#ffccb2",
+                    "on-tertiary-fixed-variant": "#73350e",
+                    "error": "#F0564A",
+                    "on-tertiary-container": "#783911",
+                    "secondary-fixed-dim": "#c2c6d1",
+                    "surface-container-high": "#272a30",
+                    "on-secondary-fixed": "#171c24",
+                    "primary-container": "#2bd576",
+                    "surface-variant": "#32353a",
+                    "inverse-on-surface": "#2e3036",
+                    "surface-tint": "#3ee181",
+                    "on-surface": "#E8EAED",
+                    "on-primary-container": "#00572a",
+                    "tertiary-fixed-dim": "#ffb690",
+                    "primary-fixed-dim": "#3ee181",
+                    "on-secondary-container": "#b1b5c0",
+                    "error-container": "#93000a",
+                    "primary-fixed": "#62ff9a",
+                    "on-surface-variant": "#bbcbbb",
+                    "surface-container-highest": "#32353a",
+                    "inverse-primary": "#006d37",
+                    "outline": "#1F242C",
+                    "surface-dim": "#111319",
+                    "on-tertiary-fixed": "#341100"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-desktop": "32px",
+                    "unit": "4px",
+                    "container-max": "1440px",
+                    "gutter": "16px",
+                    "margin-mobile": "16px"
+            },
+            "fontFamily": {
+                    "label-caps": [
+                            "Space Grotesk"
+                    ],
+                    "data-lg": [
+                            "IBM Plex Mono"
+                    ],
+                    "headline-md": [
+                            "Space Grotesk"
+                    ],
+                    "data-md": [
+                            "IBM Plex Mono"
+                    ],
+                    "data-sm": [
+                            "IBM Plex Mono"
+                    ],
+                    "headline-sm": [
+                            "Space Grotesk"
+                    ],
+                    "headline-lg": [
+                            "Space Grotesk"
+                    ],
+                    "body-md": [
+                            "Space Grotesk"
+                    ],
+                    "body-lg": [
+                            "Space Grotesk"
+                    ]
+            },
+            "fontSize": {
+                    "label-caps": [
+                            "11px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.1em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "data-lg": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "letterSpacing": "0.02em",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "data-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "data-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-sm": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-lg": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md text-body-md h-screen w-full overflow-hidden flex selection:bg-primary selection:text-on-primary">
+<!-- SideNavBar Component -->
+<nav class="fixed left-0 top-0 h-full flex flex-col bg-surface h-screen w-64 border-r border-outline z-50">
+<!-- Header -->
+<div class="p-6 border-b border-outline bg-surface-container-lowest">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary tracking-tight">HH-FACECHAIN</h1>
+<p class="font-data-sm text-data-sm text-secondary">V.2.0.4-STABLE</p>
+</div>
+</div>
+<button class="w-full mt-4 bg-primary-container text-on-primary font-label-caps text-label-caps py-2 px-4 rounded hover:bg-surface-tint transition-colors duration-150 active:bg-primary-container active:text-on-primary-container">INITIATE SCAN</button>
+</div>
+<!-- Main Nav -->
+<div class="flex-1 overflow-y-auto py-4">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-surface-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">cloud_upload</span>
+<span class="font-data-md text-data-md">Upload Source</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-surface-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">animated_images</span>
+<span class="font-data-md text-data-md">Neural Scan</span>
+</a>
+</li>
+<li>
+<!-- Active State: Biometric Match -->
+<a class="flex items-center gap-3 px-4 py-3 bg-secondary-container text-primary border-l-2 border-primary transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">face</span>
+<span class="font-data-md text-data-md">Biometric Match</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-surface-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">link</span>
+<span class="font-data-md text-data-md">Chain Verify</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-surface-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="font-data-md text-data-md">Archives</span>
+</a>
+</li>
+</ul>
+</div>
+<!-- Footer Nav -->
+<div class="border-t border-outline py-2 bg-surface-container-lowest">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-surface-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">terminal</span>
+<span class="font-data-md text-data-md">System Logs</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-surface-variant transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-data-md text-data-md">Settings</span>
+</a>
+</li>
+</ul>
+</div>
+</nav>
+<!-- Main Workspace -->
+<div class="ml-64 flex-1 flex flex-col relative w-full h-full bg-background">
+<!-- TopAppBar Component -->
+<header class="fixed top-0 right-0 left-64 z-40 flex items-center justify-between px-margin-desktop bg-surface-container h-16 border-b border-outline bg-surface-container">
+<div class="flex items-center">
+<span class="font-headline-sm text-headline-sm text-on-surface uppercase tracking-widest">PIPELINE: ID_VERIFICATION_SEQUENCE</span>
+</div>
+<div class="flex items-center gap-6">
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-80 font-label-caps text-label-caps" href="#">LIVE_FEED</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-80 font-label-caps text-label-caps" href="#">BATCH_PROCESS</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-80 font-label-caps text-label-caps" href="#">NODE_STATUS</a>
+</nav>
+<div class="h-6 w-px bg-outline mx-2"></div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:text-primary transition-colors cursor-pointer active:opacity-80"><span class="material-symbols-outlined">notifications</span></button>
+<button class="hover:text-primary transition-colors cursor-pointer active:opacity-80"><span class="material-symbols-outlined">account_tree</span></button>
+<button class="hover:text-primary transition-colors cursor-pointer active:opacity-80"><span class="material-symbols-outlined">power_settings_new</span></button>
+</div>
+</div>
+</header>
+<!-- Scrollable Content Canvas -->
+<main class="mt-16 mb-8 p-margin-desktop overflow-y-auto flex-1">
+<div class="max-w-container-max mx-auto grid grid-cols-12 gap-gutter">
+<!-- Verification Passed Banner -->
+<div class="col-span-12 border border-primary bg-primary/10 flex items-center p-4 rounded-none mb-4">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center mr-4 shrink-0">
+<span class="material-symbols-outlined text-on-primary">check</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-primary tracking-tight">VERIFICATION_PASSED</h2>
+<p class="font-data-sm text-data-sm text-primary/80">Identity protocol completed successfully. Match criteria exceeded 90% threshold.</p>
+</div>
+<div class="ml-auto font-data-md text-data-md text-primary">STATUS: [200_OK]</div>
+</div>
+<!-- Pipeline Tracker -->
+<div class="col-span-12 flex items-center justify-between border-y border-outline py-4 mb-6 bg-surface-container-lowest px-4">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-sm">radio_button_checked</span>
+<span class="font-data-sm text-data-sm uppercase">1. Upload</span>
+</div>
+<div class="flex-1 h-px bg-primary mx-4 opacity-30"></div>
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-sm">radio_button_checked</span>
+<span class="font-data-sm text-data-sm uppercase">2. Scan</span>
+</div>
+<div class="flex-1 h-px bg-primary mx-4 opacity-30"></div>
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-sm">radio_button_checked</span>
+<span class="font-data-sm text-data-sm uppercase">3. Match</span>
+</div>
+<div class="flex-1 h-px bg-primary mx-4 opacity-30"></div>
+<div class="flex items-center gap-2 text-primary font-bold">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-data-sm text-data-sm uppercase">4. Verify</span>
+</div>
+</div>
+<!-- Main Grid Row -->
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-gutter">
+<!-- Match Result Card -->
+<div class="bg-surface-bright border border-outline rounded-none flex flex-col relative overflow-hidden">
+<div class="p-3 border-b border-outline flex justify-between items-center bg-surface-container-low">
+<span class="font-label-caps text-label-caps text-on-surface">BIOMETRIC MATCH RESULT</span>
+<span class="font-data-sm text-data-sm text-secondary">T_DELTA: 0.842s</span>
+</div>
+<div class="p-6 grid grid-cols-2 gap-6 relative">
+<!-- Input Image -->
+<div class="flex flex-col gap-2 relative">
+<span class="font-data-sm text-data-sm text-secondary uppercase tracking-widest absolute top-2 left-2 z-10 bg-background/80 px-1 border border-outline-variant">SOURCE_INPUT</span>
+<div class="aspect-square border border-outline bg-background relative overflow-hidden group">
+<img class="w-full h-full object-cover filter grayscale mix-blend-luminosity opacity-80" data-alt="A high-contrast, clinical photograph of a person's face, appearing as raw surveillance input data displayed on a dark grey technical monitor. The lighting is harsh and realistic, devoid of artistic stylization. Overlaid with faint cyan and green forensic tracking lines and digital target markers typical of biometric scanning software. The aesthetic is gritty, cold, and strictly functional, emphasizing technical brutalism in a dark-mode environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfw-Sv68eMBJPn2CZjx1nuRB5Za0Qh119WRmZXROCUj0i09AJtHLBHqid_5L-Dicewn_pDxbqkg0toci8RCe9kM-qPob1iAV2rgYyMbZB1EI0oBIFmOrikcGMMkH3W0_dLS23KiX5FvWpmMNgr1uIexENasYuFGsjCoI-absp8fRFHymGyKakLIJ8Gn_x4UQYGLaV3BeXnNIjwaVBj9Dwpz8YHS3kZIAmcsvSvP_ZKy8HQT1Rb7MRgcWcVibv3YSLAXK8rysDfEFY"/>
+<!-- Scanlines -->
+<div class="absolute inset-0 pointer-events-none" style="background: repeating-linear-gradient(transparent, transparent 2px, rgba(0,0,0,0.5) 3px, rgba(0,0,0,0.5) 4px);"></div>
+</div>
+</div>
+<!-- Match Target -->
+<div class="flex flex-col gap-2 relative">
+<span class="font-data-sm text-data-sm text-primary uppercase tracking-widest absolute top-2 left-2 z-10 bg-background/80 px-1 border border-primary/50 text-shadow">MATCH_TARGET</span>
+<div class="aspect-square border border-primary relative overflow-hidden">
+<img class="w-full h-full object-cover opacity-90" data-alt="A source social media photo of a person attending a tech gala, displayed within a rigid, clinical interface frame. The original image is slightly degraded as if pulled from a compressed web source. It sits on a charcoal black background, juxtaposed against sharp, neon green data readouts and crosshairs indicating successful facial landmark identification. The overall mood is sterile, analytical, and highly structured, fitting a high-stakes verification console." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwRUftRp_UeVHwVucu6xI_DRG26ob1hUblIKVR3L4781c6veG14Qf-wYBt2AJJHX7y3ltf-n60Mg7B-8b7MXCdSeFRvtG3m4cQiEEhVV53DDTKGKnygV1NBkzzprXxy9V0g29KXM_oLl0_vRTTLqt8tN2sPbmGRXnvcvT9tPjJII0j2SYq71gb3zPAWMfVVzHTM6M12ra0wamgKohhuCLhSh_h-U2RFE5q9fmxo6Y26tB3Mq-Z6lQPJNO-3zAF5mTOHvjJXUoj810"/>
+<!-- Overlay crosshair -->
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<div class="w-16 h-16 border border-primary rounded-full relative">
+<div class="absolute top-1/2 left-0 w-full h-px bg-primary transform -translate-y-1/2"></div>
+<div class="absolute left-1/2 top-0 h-full w-px bg-primary transform -translate-x-1/2"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Connection Line (visual only, hidden on small screens) -->
+<div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center pointer-events-none z-20">
+<span class="material-symbols-outlined text-primary text-3xl bg-surface-bright rounded-full border border-primary p-1">check_circle</span>
+</div>
+</div>
+<!-- Match Stats Footer inside card -->
+<div class="border-t border-outline p-6 bg-surface-container-low flex flex-col gap-4">
+<div class="flex justify-between items-end">
+<div>
+<p class="font-label-caps text-label-caps text-secondary mb-1">CONFIDENCE SCORE</p>
+<h3 class="font-data-lg text-data-lg text-primary text-3xl tracking-tighter">91.0% MATCH</h3>
+</div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-1 bg-surface-variant border border-outline text-on-surface font-label-caps text-label-caps">INSTAGRAM</span>
+</div>
+</div>
+<!-- Progress Bar -->
+<div class="w-full h-2 bg-background border border-outline">
+<div class="h-full bg-primary" style="width: 91%;"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+<div>
+<p class="font-data-sm text-data-sm text-secondary">SRC_URL</p>
+<p class="font-data-sm text-data-sm text-on-surface truncate">instagr.am/p/Cx9f2...</p>
+</div>
+<div>
+<p class="font-data-sm text-data-sm text-secondary">EXTRACTED_TEXT</p>
+<p class="font-data-sm text-data-sm text-on-surface truncate">'Attending the tech gala in SF!'</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Column -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-gutter">
+<!-- Blockchain Proof Card -->
+<div class="bg-surface-bright border border-outline rounded-none flex flex-col h-full">
+<div class="p-3 border-b border-outline flex justify-between items-center bg-surface-container-low">
+<span class="font-label-caps text-label-caps text-on-surface">CHAIN_VERIFICATION</span>
+<span class="material-symbols-outlined text-secondary text-sm">link</span>
+</div>
+<div class="p-6 flex flex-col gap-6 flex-1">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 border border-outline bg-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">verified_user</span>
+</div>
+<div>
+<p class="font-headline-sm text-headline-sm text-on-surface">PROOF_MINTED</p>
+<p class="font-data-sm text-data-sm text-primary">Polygon Network // Immutable</p>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex flex-col border-b border-outline pb-2">
+<span class="font-data-sm text-data-sm text-secondary">CONTENT_HASH</span>
+<span class="font-data-md text-data-md text-on-surface break-all">0x7a2d981e4c9f4e...</span>
+</div>
+<div class="flex flex-col border-b border-outline pb-2">
+<span class="font-data-sm text-data-sm text-secondary">TX_HASH</span>
+<span class="font-data-md text-data-md text-on-surface break-all">0x51d7c3b8a1f9e2b8c...</span>
+</div>
+<div class="flex flex-col">
+<span class="font-data-sm text-data-sm text-secondary">BLOCK_HEIGHT</span>
+<span class="font-data-md text-data-md text-on-surface">45,921,304</span>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-outline bg-surface-container">
+<button class="w-full py-2 border border-outline bg-transparent text-on-surface font-label-caps text-label-caps hover:bg-surface-variant transition-colors flex justify-center items-center gap-2">
+                                View on PolygonScan
+                                <span class="material-symbols-outlined text-sm">open_in_new</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Candidate List (Bottom Row) -->
+<div class="col-span-12 mt-4">
+<div class="bg-surface-bright border border-outline rounded-none flex flex-col">
+<div class="p-3 border-b border-outline bg-surface-container-low flex items-center gap-2">
+<span class="font-label-caps text-label-caps text-on-surface">ALTERNATIVE MATCH CANDIDATES</span>
+<span class="px-2 py-0.5 bg-surface-variant text-secondary font-data-sm text-data-sm rounded-sm">3_FOUND</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline">
+<th class="p-4 font-data-sm text-data-sm text-secondary font-normal w-16">RANK</th>
+<th class="p-4 font-data-sm text-data-sm text-secondary font-normal">ENTITY_ID</th>
+<th class="p-4 font-data-sm text-data-sm text-secondary font-normal">SOURCE</th>
+<th class="p-4 font-data-sm text-data-sm text-secondary font-normal">SCORE</th>
+<th class="p-4 font-data-sm text-data-sm text-secondary font-normal text-right">ACTION</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-outline bg-background/50 hover:bg-surface-variant transition-colors">
+<td class="p-4 font-data-md text-data-md text-on-surface">#02</td>
+<td class="p-4 font-data-md text-data-md text-on-surface">ENT-902-A</td>
+<td class="p-4 font-data-sm text-data-sm text-secondary">LINKEDIN</td>
+<td class="p-4 font-data-md text-data-md text-on-surface">78.4%</td>
+<td class="p-4 text-right">
+<button class="text-secondary hover:text-on-surface font-label-caps text-label-caps border border-outline px-3 py-1">REVIEW</button>
+</td>
+</tr>
+<tr class="border-b border-outline hover:bg-surface-variant transition-colors">
+<td class="p-4 font-data-md text-data-md text-on-surface">#03</td>
+<td class="p-4 font-data-md text-data-md text-on-surface">ENT-114-C</td>
+<td class="p-4 font-data-sm text-data-sm text-secondary">TWITTER</td>
+<td class="p-4 font-data-md text-data-md text-on-surface">62.1%</td>
+<td class="p-4 text-right">
+<button class="text-secondary hover:text-on-surface font-label-caps text-label-caps border border-outline px-3 py-1">REVIEW</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-variant transition-colors">
+<td class="p-4 font-data-md text-data-md text-on-surface">#04</td>
+<td class="p-4 font-data-md text-data-md text-on-surface">ENT-088-X</td>
+<td class="p-4 font-data-sm text-data-sm text-secondary">FACEBOOK</td>
+<td class="p-4 font-data-md text-data-md text-on-surface">41.9%</td>
+<td class="p-4 text-right">
+<button class="text-secondary hover:text-on-surface font-label-caps text-label-caps border border-outline px-3 py-1">REVIEW</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Component -->
+<footer class="fixed bottom-0 right-0 left-64 flex items-center justify-between px-4 h-8 w-full border-t border-outline fixed bottom-0 bg-surface-container-lowest">
+<span class="font-data-sm text-data-sm text-secondary">SYSTEM_STATUS: ENCRYPTED // HASH: 0x82F...E92</span>
+<div class="flex items-center gap-6">
+<a class="font-data-sm text-data-sm text-on-secondary-container hover:text-primary opacity-90 hover:opacity-100 transition-colors" href="#">PROTOCOL_DOCS</a>
+<a class="font-data-sm text-data-sm text-on-secondary-container hover:text-primary opacity-90 hover:opacity-100 transition-colors" href="#">CHAIN_EXPLORER</a>
+<a class="font-data-sm text-data-sm text-on-secondary-container hover:text-primary opacity-90 hover:opacity-100 transition-colors" href="#">SUPPORT_NODE</a>
+</div>
+</footer>
+</div>
+</body></html>
