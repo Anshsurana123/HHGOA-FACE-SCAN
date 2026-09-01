@@ -329,6 +329,13 @@ def _fetch_dual_perspective_results(
             except Exception:
                 pass
         merged = _merge_candidate_lists(full_matches, crop_matches)
+        if not merged:
+            try:
+                y_matches = search_yandex_images(full_url, api_key=serpapi_key)
+                if y_matches:
+                    return y_matches, f"Google Lens (Auto-Fallback to Yandex: {len(y_matches)} matches)"
+            except Exception:
+                pass
         return merged, f"Google Lens (Dual-Perspective: {len(full_matches)} Full + {len(crop_matches)} Crop)"
 
     elif engine_name == "yandex":
@@ -344,6 +351,13 @@ def _fetch_dual_perspective_results(
             except Exception:
                 pass
         merged = _merge_candidate_lists(full_matches, crop_matches)
+        if not merged:
+            try:
+                l_matches = search_google_lens(full_url, api_key=serpapi_key)
+                if l_matches:
+                    return l_matches, f"Yandex (Auto-Fallback to Lens: {len(l_matches)} matches)"
+            except Exception:
+                pass
         return merged, f"Yandex Images (Dual-Perspective: {len(full_matches)} Full + {len(crop_matches)} Crop)"
 
     else:
