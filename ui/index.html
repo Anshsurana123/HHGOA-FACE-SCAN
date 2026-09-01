@@ -173,50 +173,9 @@
         </button>
       </div>
 
-      <!-- SECTION 1: SCAN SOURCE -->
+      <!-- SECTION 1: TARGET BLOCKCHAIN -->
       <div class="flex flex-col gap-2">
-        <div class="flex items-center justify-between">
-          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">1. Input Scan</label>
-          <button id="btnClearImage" class="text-xs text-textMuted hover:text-signalRed font-mono hidden">RESET</button>
-        </div>
-
-        <!-- Dropzone Container -->
-        <div id="dropzone" class="border-hairline border-dashed rounded-md bg-bg/70 hover:border-signalGreen/50 transition-colors p-4 flex flex-col items-center justify-center cursor-pointer min-h-[160px] relative overflow-hidden group">
-          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" class="hidden" />
-
-          <!-- Empty Dropzone State -->
-          <div id="dropzoneEmpty" class="flex flex-col items-center text-center gap-2 pointer-events-none">
-            <svg class="w-8 h-8 text-textSecondary group-hover:text-signalGreen transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p class="text-xs text-textPrimary font-medium">Drop face photo or <span class="text-signalGreen underline">browse</span></p>
-            <p class="text-[11px] text-textMuted font-mono">JPG, PNG, WEBP &bull; Max 10MB</p>
-          </div>
-
-          <!-- Preview State -->
-          <div id="dropzonePreview" class="hidden w-full h-full flex flex-col items-center relative">
-            <img id="imgPreview" src="" alt="Scan Preview" class="max-h-40 max-w-full rounded border border-border object-contain" />
-            <div class="absolute top-1 right-1 bg-bg/80 border border-border px-1.5 py-0.5 rounded text-[10px] font-mono text-signalGreen" id="previewMeta">SCAN READY</div>
-          </div>
-        </div>
-
-        <!-- Preset Public Figures -->
-        <div class="flex flex-col gap-1 mt-1">
-          <label class="text-[11px] font-mono text-textMuted uppercase">Or select test scan:</label>
-          <div class="grid grid-cols-2 gap-1.5">
-            <button class="btn-sample px-2.5 py-1.5 rounded border border-border bg-surfaceElevated hover:border-signalGreen/60 text-xs font-mono text-left truncate transition-colors" data-id="scan1.jpg">
-              &bull; Barack Obama
-            </button>
-            <button class="btn-sample px-2.5 py-1.5 rounded border border-border bg-surfaceElevated hover:border-signalGreen/60 text-xs font-mono text-left truncate transition-colors" data-id="scan2.jpg">
-              &bull; Joe Biden
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- SECTION 2: TARGET BLOCKCHAIN -->
-      <div class="flex flex-col gap-2">
-        <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">2. Blockchain Network</label>
+        <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">1. Blockchain Network</label>
         <div class="grid grid-cols-2 gap-2 p-1 rounded bg-bg border border-border">
           <button id="btnNetLocal" class="py-1.5 px-2 rounded text-xs font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen">
             Local PoW
@@ -228,9 +187,9 @@
         <p class="text-[11px] text-textMuted font-mono" id="netDesc">Pure-Python simulated PoW blockchain (difficulty: '000'). Instant & offline.</p>
       </div>
 
-      <!-- SECTION 3: SEARCH ENGINE SELECTOR -->
+      <!-- SECTION 2: SEARCH ENGINE SELECTOR -->
       <div class="flex flex-col gap-2">
-        <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">3. Search Engine</label>
+        <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">2. Search Engine</label>
         <div class="grid grid-cols-3 gap-1 p-1 rounded bg-bg border border-border">
           <button id="btnEngineLens" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen" title="Google Lens Dual-Perspective visual search">
             Lens
@@ -245,10 +204,10 @@
         <p class="text-[10px] text-textMuted font-mono" id="engineDesc">Google Lens: Dual-Perspective (Full Context + Cropped Face) #1 for LinkedIn & X profiles.</p>
       </div>
 
-      <!-- SECTION 4: SEARCH DEPTH -->
+      <!-- SECTION 3: SEARCH DEPTH -->
       <div class="flex flex-col gap-2">
         <div class="flex justify-between items-center">
-          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">4. Search Depth</label>
+          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">3. Search Depth</label>
           <span id="depthVal" class="text-xs font-mono font-bold text-signalGreen">35 Candidates</span>
         </div>
         <input type="range" id="depthSlider" min="10" max="350" step="10" value="35" class="w-full accent-signalGreen cursor-pointer" />
@@ -263,10 +222,10 @@
         </button>
       </div>
 
-      <!-- SECTION 5: MATCH TOLERANCE -->
+      <!-- SECTION 4: MATCH TOLERANCE -->
       <div class="flex flex-col gap-2">
         <div class="flex justify-between items-center">
-          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">5. Cosine Tolerance</label>
+          <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">4. Cosine Tolerance</label>
           <span id="tolVal" class="text-xs font-mono font-bold text-signalGreen">0.35</span>
         </div>
         <input type="range" id="tolSlider" min="0.05" max="0.95" step="0.01" value="0.35" class="w-full accent-signalGreen cursor-pointer" />
@@ -354,10 +313,51 @@
             </div>
             <div>
               <h3 class="text-xs font-bold font-mono uppercase text-textPrimary">READY TO INITIATE PIPELINE</h3>
-              <p class="text-xs text-textMuted">Upload a facial image or pick a test subject to execute reverse social media search and blockchain provenance anchoring.</p>
+              <p class="text-xs text-textMuted">Upload a facial image to execute reverse social media search and blockchain provenance anchoring.</p>
             </div>
           </div>
           <span class="text-xs font-mono text-textMuted px-2 py-1 rounded bg-surfaceElevated border border-border">SYSTEM IDLE</span>
+        </div>
+
+        <!-- FULL-WIDTH FACIAL SCAN UPLOAD AREA (SPANNING ACCROSS THE CANVAS) -->
+        <div id="dropzone" class="border-2 border-dashed border-border hover:border-signalGreen/70 rounded-lg bg-surface/60 hover:bg-surface/90 transition-all p-7 flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group shadow-sm min-h-[160px]">
+          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" class="hidden" />
+
+          <!-- Empty Dropzone State -->
+          <div id="dropzoneEmpty" class="flex flex-col items-center text-center gap-3 pointer-events-none py-2">
+            <div class="w-14 h-14 rounded-xl border border-signalGreen/30 bg-signalGreen/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <svg class="w-7 h-7 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <p class="text-sm text-textPrimary font-semibold">
+                Drag and drop face photo or <span class="text-signalGreen underline cursor-pointer">browse your device</span>
+              </p>
+              <p class="text-xs text-textMuted font-mono">Supports JPG, PNG, WEBP &bull; Max 10MB &bull; 512-d ArcFace Biometric Extraction</p>
+            </div>
+          </div>
+
+          <!-- Preview State (when image is loaded) -->
+          <div id="dropzonePreview" class="hidden w-full flex items-center justify-between gap-6 p-2">
+            <div class="flex items-center gap-4">
+              <div class="relative">
+                <img id="imgPreview" src="" alt="Scan Preview" class="w-20 h-20 rounded-md border border-signalGreen object-cover bg-bg shadow-md" />
+                <div class="absolute -top-1.5 -right-1.5 bg-signalGreen text-bg font-bold text-[9px] font-mono px-1 rounded">READY</div>
+              </div>
+              <div class="flex flex-col gap-0.5 font-mono">
+                <span class="text-xs font-bold text-textPrimary uppercase" id="uploadFileName">facial_scan.jpg</span>
+                <span class="text-[11px] text-textMuted" id="uploadFileSize">Uploaded Image</span>
+                <span class="text-[10px] text-signalGreen font-bold mt-1">✓ READY FOR BIOMETRIC EXTRACTION</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <button id="btnClearImage" type="button" class="px-3 py-1.5 rounded border border-border hover:border-signalRed bg-surfaceElevated hover:text-signalRed text-textMuted font-mono text-xs transition-colors cursor-pointer flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <span>Reset Image</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Banner: Verification Passed (Hidden by default) -->
@@ -1265,14 +1265,21 @@
     });
 
     function handleFileSelect(file) {
+      if (!file) return;
       selectedImageFile = file;
       selectedSampleId = null;
+
+      const uploadFileName = document.getElementById("uploadFileName");
+      const uploadFileSize = document.getElementById("uploadFileSize");
+
       const reader = new FileReader();
       reader.onload = (e) => {
         imgPreview.src = e.target.result;
+        if (uploadFileName) uploadFileName.textContent = file.name;
+        if (uploadFileSize) uploadFileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
         dropzoneEmpty.classList.add("hidden");
         dropzonePreview.classList.remove("hidden");
-        btnClearImage.classList.remove("hidden");
+        if (btnClearImage) btnClearImage.classList.remove("hidden");
         imgSourceDisplay.src = e.target.result;
         imgSourceDisplay.classList.remove("hidden");
         imgSourcePlaceholder.classList.add("hidden");
@@ -1290,7 +1297,7 @@
       // 1. Input Dropzone
       dropzoneEmpty.classList.remove("hidden");
       dropzonePreview.classList.add("hidden");
-      btnClearImage.classList.add("hidden");
+      if (btnClearImage) btnClearImage.classList.add("hidden");
 
       // 2. Left Source Image Box
       imgSourceDisplay.src = "";
@@ -1351,25 +1358,7 @@
       appendLog("[RESET] System state and comparator displays cleared to initial ready state.");
     }
 
-    btnClearImage.addEventListener("click", resetAllUI);
-
-    // Sample Presets
-    document.querySelectorAll(".btn-sample").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-id");
-        selectedSampleId = id;
-        selectedImageFile = null;
-        fileInput.value = "";
-        imgPreview.src = `/demo/${id}`;
-        dropzoneEmpty.classList.add("hidden");
-        dropzonePreview.classList.remove("hidden");
-        btnClearImage.classList.remove("hidden");
-        imgSourceDisplay.src = `/demo/${id}`;
-        imgSourceDisplay.classList.remove("hidden");
-        imgSourcePlaceholder.classList.add("hidden");
-        appendLog(`[INPUT] Selected test subject: ${btn.textContent.trim()} (${id})`);
-      });
-    });
+    if (btnClearImage) btnClearImage.addEventListener("click", resetAllUI);
 
     // Copy to clipboard
     document.querySelectorAll(".btn-copy").forEach((btn) => {
@@ -1394,11 +1383,11 @@
     // RUN PIPELINE
     btnRunScan.addEventListener("click", async () => {
       if (isRunning) return;
-      if (!selectedImageFile && !selectedSampleId) {
+      if (!selectedImageFile) {
         hideBanners();
         bannerError.classList.remove("hidden");
         errorBannerTitle.textContent = "INPUT REQUIRED";
-        errorBannerText.textContent = "Please upload a facial image or pick one of the sample presets to run the pipeline.";
+        errorBannerText.textContent = "Please upload or drop a facial image to run the verification pipeline.";
         return;
       }
 
