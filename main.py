@@ -107,7 +107,8 @@ def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: i
     try:
         match_result = find_verified_social_post(
             input_embedding=embedding,
-            image_path_or_bytes=cropped_face_bytes,
+            image_path_or_bytes=image,
+            cropped_face_bytes=cropped_face_bytes,
             tol=tol,
             engine=engine,
             max_candidates=max_candidates,
@@ -261,7 +262,8 @@ def search_cmd(image: str, tol: float, engine: str, max_candidates: int, until_s
     try:
         match_result = find_verified_social_post(
             input_embedding=embedding,
-            image_path_or_bytes=cropped_face_bytes,
+            image_path_or_bytes=image,
+            cropped_face_bytes=cropped_face_bytes,
             tol=tol,
             engine=engine,
             max_candidates=max_candidates,

@@ -1,11 +1,12 @@
 """Search and face match orchestrator for social media posts.
 
 Supports:
-  - Yandex Images (Primary / Default for deep facial identification)
-  - Google Lens (Secondary / Fallback)
-  - Hybrid Multi-Engine (Combines Yandex + Google Lens)
-  - Tiered evidence strength with perceptual aHash near-duplicate detection
-  - Full candidate pool evaluation with configurable search depth
+  - Dual-Perspective Visual Search: queries reverse search engines with BOTH
+    the uncropped full image (for full-body/background context like LinkedIn/X)
+    AND the focused facial crop (for avatar/portrait closeups).
+  - Multi-Engine: Google Lens, Yandex Images, and Hybrid (both engines).
+  - Continuous "Till Success" mode + configurable candidate pool (10-350).
+  - Non-circular tiered evidence ranking with aHash perceptual near-duplicate detection.
 """
 
 from __future__ import annotations
@@ -101,7 +102,7 @@ class MatcherResult:
         accepted_record: dict[str, Any] | None,
         candidate_logs: list[dict[str, Any]],
         imgbb_url: str | None = None,
-        search_engine: str = "yandex",
+        search_engine: str = "dual_perspective",
         total_engine_matches: int = 0,
         total_social_candidates: int = 0,
         total_web_candidates: int = 0,
@@ -229,66 +230,115 @@ def _evaluate_candidate(
         return log
 
 
-def _fetch_engine_results(
+def _merge_candidate_lists(*lists_of_candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Merges candidate lists from multiple perspectives and engines, preserving order and deduplicating by URL."""
+    merged: list[dict[str, Any]] = []
+    seen_urls: set[str] = set()
+
+    for cand_list in lists_of_candidates:
+        for item in cand_list:
+            link = item.get("link", "")
+            if not link:
+                continue
+            canon = normalize_url(link)
+            if canon in seen_urls:
+                continue
+            seen_urls.add(canon)
+            merged.append(item)
+
+    return merged
+
+
+def _fetch_dual_perspective_results(
     engine: str,
-    imgbb_url: str,
+    full_url: str,
+    crop_url: str | None,
     serpapi_key: str | None,
 ) -> tuple[list[dict[str, Any]], str]:
-    """Fetches candidates from Yandex, Google Lens, or Hybrid combination."""
-    if engine.lower() == "google_lens":
-        results = search_google_lens(imgbb_url, api_key=serpapi_key)
-        return results, "Google Lens"
-    elif engine.lower() == "hybrid":
-        # Query Yandex first, supplement with Google Lens
-        y_results = []
+    """
+    Fetches visual search matches across both perspectives:
+    1. Full image (for full-body / background context matching on LinkedIn, X, etc.)
+    2. Cropped facial image (for close-up portrait / avatar matching)
+    """
+    engine_name = engine.lower()
+
+    if engine_name == "google_lens":
+        full_matches = []
+        crop_matches = []
         try:
-            y_results = search_yandex_images(imgbb_url, api_key=serpapi_key)
+            full_matches = search_google_lens(full_url, api_key=serpapi_key)
         except Exception:
             pass
+        if crop_url and crop_url != full_url:
+            try:
+                crop_matches = search_google_lens(crop_url, api_key=serpapi_key)
+            except Exception:
+                pass
+        merged = _merge_candidate_lists(full_matches, crop_matches)
+        return merged, f"Google Lens (Dual-Perspective: {len(full_matches)} Full + {len(crop_matches)} Crop)"
 
-        l_results = []
+    elif engine_name == "yandex":
+        full_matches = []
+        crop_matches = []
         try:
-            l_results = search_google_lens(imgbb_url, api_key=serpapi_key)
+            full_matches = search_yandex_images(full_url, api_key=serpapi_key)
         except Exception:
             pass
+        if crop_url and crop_url != full_url:
+            try:
+                crop_matches = search_yandex_images(crop_url, api_key=serpapi_key)
+            except Exception:
+                pass
+        merged = _merge_candidate_lists(full_matches, crop_matches)
+        return merged, f"Yandex Images (Dual-Perspective: {len(full_matches)} Full + {len(crop_matches)} Crop)"
 
-        merged = y_results + [r for r in l_results if not any(y["link"] == r["link"] for y in y_results)]
-        return merged, f"Hybrid (Yandex {len(y_results)} + Lens {len(l_results)})"
     else:
-        # Default: Yandex Images (Gold standard for human face reverse search)
+        # Hybrid: Google Lens + Yandex across both full scan and cropped face
+        lens_full, lens_crop, yandex_full, yandex_crop = [], [], [], []
         try:
-            results = search_yandex_images(imgbb_url, api_key=serpapi_key)
-            if results:
-                return results, "Yandex Images"
+            lens_full = search_google_lens(full_url, api_key=serpapi_key)
+        except Exception:
+            pass
+        try:
+            lens_crop = search_google_lens(crop_url, api_key=serpapi_key) if crop_url else []
+        except Exception:
+            pass
+        try:
+            yandex_full = search_yandex_images(full_url, api_key=serpapi_key)
+        except Exception:
+            pass
+        try:
+            yandex_crop = search_yandex_images(crop_url, api_key=serpapi_key) if crop_url else []
         except Exception:
             pass
 
-        # Automatic fallback to Google Lens if Yandex raises or returns empty
-        results = search_google_lens(imgbb_url, api_key=serpapi_key)
-        return results, "Google Lens (Yandex Fallback)"
+        # Prioritize Google Lens full matches first (highest social accuracy), then Yandex full, then crops
+        merged = _merge_candidate_lists(lens_full, yandex_full, lens_crop, yandex_crop)
+        total_count = len(lens_full) + len(lens_crop) + len(yandex_full) + len(yandex_crop)
+        return merged, f"Hybrid (Lens {len(lens_full)+len(lens_crop)} + Yandex {len(yandex_full)+len(yandex_crop)} = {total_count} raw)"
 
 
 def find_verified_social_post(
     input_embedding: np.ndarray,
     image_path_or_bytes: str | bytes,
+    cropped_face_bytes: str | bytes | None = None,
     tol: float = 0.35,
-    engine: str = "yandex",
+    engine: str = "hybrid",
     serpapi_key: str | None = None,
     imgbb_key: str | None = None,
-    max_candidates: int = 35,
+    max_candidates: int = 50,
     until_success: bool = False,
     include_general_web: bool = True,
     offline_demo: bool = False,
     offline_post_url: str | None = None,
 ) -> MatcherResult:
     """
-    Executes Stage 2:
-    1. Upload scan (face crop) to ImgBB -> public URL
-    2. Query Visual Search Engine (Yandex Images primary / Google Lens / Hybrid)
-    3. Rank candidates: social-platform matches first, then general web matches
-    4. Evaluate candidate pool:
-       - If `until_success=True`: evaluates all 300+ candidates until the first verified face match is found.
-       - If `until_success=False`: evaluates up to `max_candidates` and selects the best evidence tier/distance.
+    Executes Stage 2 with Dual-Perspective Multi-Engine Search:
+    1. Uploads both full image and cropped facial portrait to ImgBB
+    2. Queries visual search engines across both perspectives (Full Scan + Zoomed Crop)
+    3. Ranks and evaluates candidate pool:
+       - If `until_success=True`: evaluates continuously until a confirmed face match is found.
+       - If `until_success=False`: evaluates up to `max_candidates` and picks the best match.
     """
     candidate_logs: list[dict[str, Any]] = []
 
@@ -320,19 +370,34 @@ def find_verified_social_post(
     input_bytes = _to_bytes(image_path_or_bytes)
     input_ahash = _average_hash(input_bytes)
 
-    imgbb_url = upload_to_imgbb(image_path_or_bytes, api_key=imgbb_key)
-    raw_results, active_engine_label = _fetch_engine_results(engine, imgbb_url, serpapi_key)
+    # 1. Upload Full Image
+    full_imgbb_url = upload_to_imgbb(image_path_or_bytes, api_key=imgbb_key)
+    
+    # 2. Upload Cropped Face if provided
+    crop_imgbb_url = None
+    if cropped_face_bytes is not None:
+        try:
+            crop_imgbb_url = upload_to_imgbb(cropped_face_bytes, api_key=imgbb_key)
+        except Exception:
+            crop_imgbb_url = full_imgbb_url
+    else:
+        crop_imgbb_url = full_imgbb_url
+
+    # 3. Dual-Perspective Multi-Engine Search
+    raw_results, active_engine_label = _fetch_dual_perspective_results(
+        engine, full_imgbb_url, crop_imgbb_url, serpapi_key
+    )
     total_engine_matches = len(raw_results)
 
     if not raw_results:
         return MatcherResult(
-            accepted_record=None, candidate_logs=candidate_logs, imgbb_url=imgbb_url,
+            accepted_record=None, candidate_logs=candidate_logs, imgbb_url=full_imgbb_url,
             search_engine=active_engine_label,
             total_engine_matches=0, total_social_candidates=0, total_web_candidates=0,
             reason=f"No visual matches returned by {active_engine_label} for this image.",
         )
 
-    # Tier 1: social-platform candidates. Tier 2: everything else on the open web.
+    # Tier 1: social-platform candidates. Tier 2: general web.
     social_candidates: list[dict[str, Any]] = []
     web_candidates: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
@@ -356,14 +421,13 @@ def find_verified_social_post(
     ordered_candidates = social_candidates + web_candidates
     if not ordered_candidates:
         return MatcherResult(
-            accepted_record=None, candidate_logs=candidate_logs, imgbb_url=imgbb_url,
+            accepted_record=None, candidate_logs=candidate_logs, imgbb_url=full_imgbb_url,
             search_engine=active_engine_label,
             total_engine_matches=total_engine_matches, total_social_candidates=0,
             total_web_candidates=0,
             reason=f"{active_engine_label} returned matches, but none were usable as web/social candidates.",
         )
 
-    # If until_success is True, search the full candidate pool (all 300+ items)
     if until_success:
         candidates_to_eval = ordered_candidates
     else:
@@ -375,13 +439,12 @@ def find_verified_social_post(
         candidate_logs.append(log)
         if log.get("matched"):
             passing.append(log)
-            # In "until_success" mode, stop as soon as we find a confirmed match
             if until_success:
                 break
 
     if not passing:
         return MatcherResult(
-            accepted_record=None, candidate_logs=candidate_logs, imgbb_url=imgbb_url,
+            accepted_record=None, candidate_logs=candidate_logs, imgbb_url=full_imgbb_url,
             search_engine=active_engine_label,
             total_engine_matches=total_engine_matches,
             total_social_candidates=total_social_candidates,
@@ -394,7 +457,7 @@ def find_verified_social_post(
     passing.sort(key=lambda l: (l["tier"], l["distance"]))
     best = passing[0]
 
-    # Reconstruct the accepted post record by re-fetching
+    # Reconstruct the accepted post record
     accepted_post = fetch_post(best["url"])
     if not accepted_post.get("_image_bytes") and best.get("_image_bytes"):
         accepted_post["_image_bytes"] = best["_image_bytes"]
@@ -402,7 +465,7 @@ def find_verified_social_post(
     return MatcherResult(
         accepted_record=accepted_post,
         candidate_logs=candidate_logs,
-        imgbb_url=imgbb_url,
+        imgbb_url=full_imgbb_url,
         search_engine=active_engine_label,
         total_engine_matches=total_engine_matches,
         total_social_candidates=total_social_candidates,

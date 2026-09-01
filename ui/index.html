@@ -874,16 +874,16 @@
 
       if (engine === "yandex") {
         btnEngineYandex.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen";
-        engineDesc.textContent = "Yandex Images: 300+ deep visual matches, #1 for human face identification.";
-        appendLog("[CONFIG] Search Engine set to YANDEX (Primary / Face-Optimized)");
+        engineDesc.textContent = "Yandex Images: Dual-Perspective (Full Context + Cropped Face) deep visual matching.";
+        appendLog("[CONFIG] Search Engine set to YANDEX (Dual-Perspective)");
       } else if (engine === "google_lens") {
         btnEngineLens.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen";
-        engineDesc.textContent = "Google Lens: Fast general visual search via SerpApi.";
-        appendLog("[CONFIG] Search Engine set to GOOGLE LENS");
+        engineDesc.textContent = "Google Lens: Dual-Perspective (Full Context + Cropped Face) #1 for LinkedIn & X profiles.";
+        appendLog("[CONFIG] Search Engine set to GOOGLE LENS (Dual-Perspective)");
       } else if (engine === "hybrid") {
         btnEngineHybrid.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen";
-        engineDesc.textContent = "Hybrid: Queries Yandex + Google Lens concurrently for maximum candidate discovery.";
-        appendLog("[CONFIG] Search Engine set to HYBRID (Yandex + Google Lens)");
+        engineDesc.textContent = "Hybrid: Queries Lens + Yandex across Dual Perspectives for maximum social discovery.";
+        appendLog("[CONFIG] Search Engine set to HYBRID (Lens + Yandex Dual-Perspective)");
       }
     }
 

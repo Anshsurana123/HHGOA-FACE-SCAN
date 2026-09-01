@@ -233,7 +233,8 @@ async def run_pipeline(
     try:
         matcher_result: MatcherResult = find_verified_social_post(
             input_embedding=embedding,
-            image_path_or_bytes=cropped_face_bytes,
+            image_path_or_bytes=image_bytes,
+            cropped_face_bytes=cropped_face_bytes,
             tol=tolerance,
             engine=engine,
             serpapi_key=serpapi_key,
