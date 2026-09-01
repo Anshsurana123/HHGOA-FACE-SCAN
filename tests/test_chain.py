@@ -88,9 +88,14 @@ def test_local_blockchain_pow_and_verification():
         assert record is not None
         assert record["block_index"] == 1
 
-        # Attempt duplicate anchor raises LocalChainError
+        # Duplicate anchor with allow_existing=True returns existing proof
+        existing_res = chain.anchor(content_hash, post_url, allow_existing=True)
+        assert existing_res.get("already_anchored") is True
+        assert existing_res["block_index"] == 1
+
+        # Duplicate anchor with allow_existing=False raises LocalChainError
         with pytest.raises(LocalChainError):
-            chain.anchor(content_hash, post_url)
+            chain.anchor(content_hash, post_url, allow_existing=False)
 
         # Unanchored hash returns is_valid=False
         unanchored = "2222222222222222222222222222222222222222222222222222222222222222"

@@ -119,12 +119,10 @@ class LocalBlockchain:
     def last_block(self) -> Block:
         return self.chain[-1]
 
-    def anchor(self, content_hash: str, post_url: str) -> dict[str, Any]:
+    def anchor(self, content_hash: str, post_url: str, allow_existing: bool = True) -> dict[str, Any]:
         """
         Anchors a content hash and post URL in a new mined block.
-
-        Raises:
-            LocalChainError: If the content hash is already anchored.
+        If already anchored and allow_existing=True, returns existing block record.
         """
         clean_hash = content_hash.lower()
 
@@ -132,6 +130,20 @@ class LocalBlockchain:
         for block in self.chain:
             for rec in block.records:
                 if rec.get("content_hash") == clean_hash:
+                    if allow_existing:
+                        return {
+                            "network": "local",
+                            "block_index": block.index,
+                            "block_hash": block.block_hash,
+                            "prev_hash": block.prev_hash,
+                            "nonce": block.nonce,
+                            "content_hash": clean_hash,
+                            "post_url": rec.get("post_url", post_url),
+                            "timestamp": block.timestamp,
+                            "anchored_at_iso": rec.get("anchored_at_iso") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(block.timestamp)),
+                            "already_anchored": True,
+                            "status_label": f"Local PoW Block #{block.index} (Existing)",
+                        }
                     raise LocalChainError(
                         f"Content hash {clean_hash} is already anchored in block #{block.index}."
                     )

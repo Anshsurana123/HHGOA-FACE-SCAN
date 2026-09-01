@@ -183,13 +183,20 @@ def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: i
     elif network.lower() == "amoy":
         try:
             client = Web3Client()
-            click.echo(f" [*] Submitting transaction to Polygon Amoy ({client.contract_address})...")
+            click.echo(f" [*] Querying / Anchoring on Polygon Amoy ({client.contract_address})...")
             anchor_info = client.anchor(content_hash=content_hash, post_url=post_url)
-            click.secho(f"\n [OK] Anchored on Polygon Amoy Testnet!", fg="green", bold=True)
-            click.echo(f"      - Contract: {anchor_info['contract_address']}")
-            click.echo(f"      - Transaction Hash: {anchor_info['tx_hash']}")
-            click.echo(f"      - Block Number: {anchor_info['block_number']}")
-            click.echo(f"      - Explorer Link: {anchor_info['explorer_url']}")
+            if anchor_info.get("already_anchored"):
+                click.secho(f"\n [OK] Existing Proof Found on Polygon Amoy Testnet!", fg="cyan", bold=True)
+                click.echo(f"      - Contract: {anchor_info['contract_address']}")
+                click.echo(f"      - Anchored At: {anchor_info.get('anchored_at_iso')}")
+                click.echo(f"      - Anchored By: {anchor_info.get('sender')}")
+                click.echo(f"      - Explorer Link: {anchor_info['explorer_url']}")
+            else:
+                click.secho(f"\n [OK] Newly Anchored on Polygon Amoy Testnet!", fg="green", bold=True)
+                click.echo(f"      - Contract: {anchor_info['contract_address']}")
+                click.echo(f"      - Transaction Hash: {anchor_info['tx_hash']}")
+                click.echo(f"      - Block Number: {anchor_info['block_number']}")
+                click.echo(f"      - Explorer Link: {anchor_info['explorer_url']}")
         except Web3ChainError as e:
             click.secho(f" [ERROR] Polygon Amoy anchoring failed: {e}", fg="red", bold=True)
             sys.exit(1)

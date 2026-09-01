@@ -365,14 +365,29 @@ async def run_pipeline(
                 content_hash=content_hash,
                 post_url=accepted_post.get("post_url", "")
             )
-            anchor_info.update({
-                "tx_hash": receipt.get("tx_hash"),
-                "block_number": receipt.get("block_number"),
-                "contract_address": client.contract_address,
-                "explorer_url": receipt.get("explorer_url"),
-                "status_label": f"Polygon Amoy Tx {receipt.get('tx_hash')[:10]}...",
-            })
-            log(f"Anchored onto Polygon Amoy: Tx {receipt.get('tx_hash')}")
+            tx_hash_val = receipt.get("tx_hash")
+            is_already = receipt.get("already_anchored", False)
+
+            if is_already:
+                anchor_info.update({
+                    "tx_hash": tx_hash_val or "EXISTING_ON_CHAIN_RECORD",
+                    "block_number": receipt.get("block_number"),
+                    "contract_address": client.contract_address,
+                    "explorer_url": receipt.get("explorer_url"),
+                    "status_label": "Polygon Amoy (Existing Proof)",
+                    "already_anchored": True,
+                })
+                log(f"Record was already anchored on Polygon Amoy at timestamp {receipt.get('anchored_at_iso')}. Retrieved existing on-chain proof.")
+            else:
+                anchor_info.update({
+                    "tx_hash": tx_hash_val,
+                    "block_number": receipt.get("block_number"),
+                    "contract_address": client.contract_address,
+                    "explorer_url": receipt.get("explorer_url"),
+                    "status_label": f"Polygon Amoy Tx {tx_hash_val[:10]}..." if tx_hash_val else "Polygon Amoy",
+                    "already_anchored": False,
+                })
+                log(f"Anchored onto Polygon Amoy: Tx {tx_hash_val}")
         except Exception as exc:
             log(f"ERROR: Polygon Amoy anchoring failed: {exc}")
             return JSONResponse(

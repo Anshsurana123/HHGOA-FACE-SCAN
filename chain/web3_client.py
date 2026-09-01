@@ -97,11 +97,22 @@ class Web3Client:
         try:
             existing = self.contract.functions.anchors(content_hash_bytes).call()
             if existing[0] > 0:  # anchoredAt > 0
-                raise Web3ChainError(
-                    f"Content hash {content_hash} is already anchored on-chain at timestamp {existing[0]} by {existing[1]}."
-                )
-        except Web3ChainError:
-            raise
+                anchored_at, by_address, stored_post_url = existing
+                return {
+                    "network": "amoy",
+                    "contract_address": self.contract_address,
+                    "tx_hash": None,
+                    "already_anchored": True,
+                    "block_number": None,
+                    "anchored_at": anchored_at,
+                    "anchored_at_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(anchored_at)),
+                    "content_hash": content_hash.lower(),
+                    "post_url": stored_post_url or post_url,
+                    "sender": by_address,
+                    "explorer_url": f"https://amoy.polygonscan.com/address/{self.contract_address}",
+                    "contract_explorer_url": f"https://amoy.polygonscan.com/address/{self.contract_address}",
+                    "message": f"Content hash {content_hash} is already anchored on-chain at timestamp {anchored_at} by {by_address}.",
+                }
         except Exception:
             pass
 
