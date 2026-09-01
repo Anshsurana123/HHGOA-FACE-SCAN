@@ -137,7 +137,7 @@ hh-facechain/
 
 ## 4. How to Run
 
-### Option A: Localhost Presentation UI (Reviewer-Friendly Console)
+### Option A: Localhost Presentation UI (Designed with Stitch MCP)
 
 Launch the interactive, lab-instrument-style forensic dashboard on localhost:
 
@@ -146,17 +146,15 @@ python server.py
 ```
 Then open your browser to **[http://localhost:8000](http://localhost:8000)**.
 
-**Features of the Presentation UI (v2.1.0):**
-- **▶ 1-Click Guided Demo Mode**: Designed specifically for hackathon judges and code reviewers. Automatically executes the complete 4-act flow on bundled demo figures while streaming real-time plain-English narration and auto-scrolling through each phase.
-- **Persistent 4-Act Story Strip**: Horizontal narrative header (`1 · UPLOAD FACE` &rarr; `2 · FIND REAL POST` &rarr; `3 · ANCHOR ON-CHAIN` &rarr; `4 · VERIFY / TAMPER`) with glowing live-stage trackers and smooth click-to-scroll navigation.
-- **One Canonical Accuracy Metric**: Single authoritative percentage gauge (`round((1 - cosine_distance) * 100, 1)%`) used consistently across hero readouts, comparator headers, and candidate lists.
-- **Single-Column Story Narrative**: Logical top-to-bottom layout:
-  1. `THE MATCH`: Hero accuracy gauge + side-by-side face comparator + platform chip + post URL + author + extracted text.
-  2. `THE BLOCKCHAIN PROOF`: SHA-256 canonical content hash, transaction/block hash, block index, human-readable UTC timestamp, deployer wallet, and 1-click PolygonScan explorer link.
-  3. `TEST IT YOURSELF`: Three prominent action buttons (`Verify this record on-chain`, `Tamper one character`, `See all candidates`).
-- **Inline Live Verification & Tamper Lab**: Verification and tamper simulations render directly inline beneath the action buttons (no disruptive modals). Side-by-side comparison displays original vs. live recomputed hash and proves the cryptographic Avalanche Effect.
-- **Plain-English Subtitles & ⓘ Tooltips**: Hoverable explanatory tooltips for Cosine Distance, Canonical Content Hash, Smart Contracts, PoW, Avalanche Effect, and OpenGraph metadata.
-- **Simplified Clean Sidebar**: Clean primary controls with drag-and-drop file upload, test scan presets, network switcher, and collapsed Advanced Settings accordion (Search Engine, Depth Slider, Till-Success, and Tolerance).
+**Features of the Presentation UI:**
+- **Drag-and-Drop Dropzone & Presets**: Upload any face scan image or click one of the preset public figure buttons (`Barack Obama`, `Joe Biden`).
+- **Interactive Dual Blockchain Toggle**: Switch seamlessly between **Local Simulated PoW Chain** and **Polygon Amoy Testnet**.
+- **Real-Time Tolerance Slider**: Adjust cosine distance matching tolerance (`0.05` strict to `0.95` loose).
+- **Staged 3-Step Pipeline Tracker**: Watch active status progression across `Face ID` -> `Web Search` -> `Blockchain Anchor`.
+- **Side-by-Side Biometric Comparison**: View source input scan alongside the discovered social media post image with large **accuracy readout gauge** (`(1 - cosine_distance) * 100`).
+- **Blockchain Proof Card**: 1-click copy for deterministic canonical SHA-256 content hashes and transaction/block hashes, with direct explorer navigation.
+- **One-Click Live Re-Verification (`Verify Record`)**: Re-fetches the live post and verifies on-chain integrity.
+- **One-Click Tamper Simulation (`Simulate Tamper`)**: Mutates cached text, recalculates SHA-256 digest, and demonstrates instant cryptographic rejection on-chain.
 - **Collapsible Monospace Log Console**: Streams stage-by-stage pipeline logs in real time.
 
 ---
