@@ -132,6 +132,7 @@ async def run_pipeline(
     tolerance: float = Form(0.35),
     engine: str = Form("yandex"),
     max_candidates: int = Form(35),
+    until_success: bool = Form(False),
     offline_demo: bool = Form(False),
 ):
     """
@@ -145,7 +146,8 @@ async def run_pipeline(
         timestamp = time.strftime("%H:%M:%S")
         logs.append(f"[{timestamp}] {msg}")
 
-    log(f"INITIATING PIPELINE: network={network.upper()}, engine={engine.upper()}, depth={max_candidates}, tolerance={tolerance:.2f}, offline={offline_demo}")
+    depth_label = "TILL_SUCCESS (Full Pool)" if until_success else str(max_candidates)
+    log(f"INITIATING PIPELINE: network={network.upper()}, engine={engine.upper()}, depth={depth_label}, tolerance={tolerance:.2f}, offline={offline_demo}")
 
     # Step 0: Read image bytes
     image_bytes: bytes = b""
@@ -237,6 +239,7 @@ async def run_pipeline(
             serpapi_key=serpapi_key,
             imgbb_key=imgbb_key,
             max_candidates=max_candidates,
+            until_success=until_success,
             offline_demo=offline_demo,
         )
         elapsed_search = time.time() - start_search_t

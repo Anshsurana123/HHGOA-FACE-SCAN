@@ -58,16 +58,18 @@ def cli():
 @click.option("--tol", "-t", type=float, default=DEFAULT_TOLERANCE, show_default=True, help="Cosine distance tolerance threshold for face match.")
 @click.option("--engine", "-e", type=click.Choice(["yandex", "google_lens", "hybrid"], case_sensitive=False), default="yandex", show_default=True, help="Visual reverse search engine (Yandex is face-optimized primary).")
 @click.option("--max-candidates", "-m", type=int, default=35, show_default=True, help="Search depth (number of visual candidates to evaluate).")
+@click.option("--until-success", is_flag=True, default=False, help="Search continuously across the full 300+ candidate pool until a match is found.")
 @click.option("--offline-demo", is_flag=True, default=False, help="Run search in offline demonstration mode without external API calls.")
 @click.option("--out-dir", "-o", default="out", show_default=True, help="Directory to save verified record and post image.")
-def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: int, offline_demo: bool, out_dir: str):
+def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: int, until_success: bool, offline_demo: bool, out_dir: str):
     """Run the complete pipeline end-to-end: Detect -> Search -> Match -> Anchor -> Save."""
     _print_banner()
     click.secho(f"[*] Starting Pipeline Execution", fg="yellow", bold=True)
     click.secho(f"    - Input image: {image}")
     click.secho(f"    - Target network: {network.upper()}")
     click.secho(f"    - Search Engine: {engine.upper()}")
-    click.secho(f"    - Search Depth: {max_candidates} candidates")
+    depth_str = "TILL_SUCCESS (Full Pool)" if until_success else f"{max_candidates} candidates"
+    click.secho(f"    - Search Depth: {depth_str}")
     click.secho(f"    - Cosine distance tolerance: {tol}")
     click.secho(f"    - Offline demo mode: {offline_demo}\n")
 
@@ -109,6 +111,7 @@ def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: i
             tol=tol,
             engine=engine,
             max_candidates=max_candidates,
+            until_success=until_success,
             offline_demo=offline_demo,
         )
 
@@ -236,14 +239,16 @@ def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: i
 @click.option("--tol", "-t", type=float, default=DEFAULT_TOLERANCE, show_default=True, help="Cosine distance tolerance threshold.")
 @click.option("--engine", "-e", type=click.Choice(["yandex", "google_lens", "hybrid"], case_sensitive=False), default="yandex", show_default=True, help="Visual reverse search engine (Yandex primary).")
 @click.option("--max-candidates", "-m", type=int, default=35, show_default=True, help="Search depth (number of visual candidates to evaluate).")
+@click.option("--until-success", is_flag=True, default=False, help="Search continuously across the full 300+ candidate pool until a match is found.")
 @click.option("--offline-demo", is_flag=True, default=False, help="Run search in offline demonstration mode.")
-def search_cmd(image: str, tol: float, engine: str, max_candidates: int, offline_demo: bool):
+def search_cmd(image: str, tol: float, engine: str, max_candidates: int, until_success: bool, offline_demo: bool):
     """Execute Stages 1 & 2 only: Detect face, search social platforms, and print match evaluation."""
     _print_banner()
     click.secho(f"[*] Running Face Search Mode (Stages 1 & 2)", fg="yellow", bold=True)
     click.echo(f"    - Input image: {image}")
     click.echo(f"    - Search engine: {engine.upper()}")
-    click.echo(f"    - Search depth: {max_candidates} candidates")
+    depth_str = "TILL_SUCCESS (Full Pool)" if until_success else f"{max_candidates} candidates"
+    click.echo(f"    - Search depth: {depth_str}")
     click.echo(f"    - Tolerance: {tol}\n")
 
     try:
@@ -260,6 +265,7 @@ def search_cmd(image: str, tol: float, engine: str, max_candidates: int, offline
             tol=tol,
             engine=engine,
             max_candidates=max_candidates,
+            until_success=until_success,
             offline_demo=offline_demo,
         )
 

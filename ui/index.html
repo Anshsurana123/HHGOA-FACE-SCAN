@@ -222,12 +222,16 @@
           <label class="text-xs font-bold uppercase tracking-wider text-textSecondary font-mono">4. Search Depth</label>
           <span id="depthVal" class="text-xs font-mono font-bold text-signalGreen">35 Candidates</span>
         </div>
-        <input type="range" id="depthSlider" min="10" max="100" step="5" value="35" class="w-full accent-signalGreen cursor-pointer" />
+        <input type="range" id="depthSlider" min="10" max="350" step="10" value="35" class="w-full accent-signalGreen cursor-pointer" />
         <div class="flex justify-between text-[10px] font-mono text-textMuted">
           <span>10 (Fast)</span>
-          <span>35 (Balanced)</span>
-          <span>100 (Deep)</span>
+          <span>150 (Deep)</span>
+          <span>350 (Full Engine Pool)</span>
         </div>
+        <button id="btnTillSuccess" type="button" class="w-full py-1.5 px-2 rounded border border-border bg-surfaceElevated hover:border-signalGreen text-xs font-mono text-textMuted hover:text-signalGreen transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+          <span>⚡</span>
+          <span id="txtTillSuccess">TILL SUCCESS (Search Until Found)</span>
+        </button>
       </div>
 
       <!-- SECTION 5: MATCH TOLERANCE -->
@@ -675,6 +679,7 @@
     let selectedSampleId = null;
     let activeNetwork = "local";
     let activeEngine = "yandex";
+    let isTillSuccess = false;
     let isRunning = false;
     let lastRecordPayload = null;
 
@@ -701,6 +706,8 @@
 
     const depthSlider = document.getElementById("depthSlider");
     const depthVal = document.getElementById("depthVal");
+    const btnTillSuccess = document.getElementById("btnTillSuccess");
+    const txtTillSuccess = document.getElementById("txtTillSuccess");
 
     const tolSlider = document.getElementById("tolSlider");
     const tolVal = document.getElementById("tolVal");
@@ -836,7 +843,26 @@
 
     // Search Depth Slider
     depthSlider.addEventListener("input", (e) => {
+      isTillSuccess = false;
+      btnTillSuccess.className = "w-full py-1.5 px-2 rounded border border-border bg-surfaceElevated hover:border-signalGreen text-xs font-mono text-textMuted hover:text-signalGreen transition-all flex items-center justify-center gap-1.5 cursor-pointer";
+      txtTillSuccess.textContent = "TILL SUCCESS (Search Until Found)";
       depthVal.textContent = `${e.target.value} Candidates`;
+    });
+
+    // Till Success Button Toggle
+    btnTillSuccess.addEventListener("click", () => {
+      isTillSuccess = !isTillSuccess;
+      if (isTillSuccess) {
+        btnTillSuccess.className = "w-full py-1.5 px-2 rounded border border-signalGreen bg-signalGreen/15 text-xs font-mono font-bold text-signalGreen transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(74,222,128,0.2)]";
+        txtTillSuccess.textContent = "⚡ TILL SUCCESS (ACTIVE — Full 300+ Pool)";
+        depthVal.textContent = "⚡ Till Success (All 300+)";
+        appendLog("[CONFIG] Search Depth mode: TILL SUCCESS (Evaluates all candidates continuously until match found)");
+      } else {
+        btnTillSuccess.className = "w-full py-1.5 px-2 rounded border border-border bg-surfaceElevated hover:border-signalGreen text-xs font-mono text-textMuted hover:text-signalGreen transition-all flex items-center justify-center gap-1.5 cursor-pointer";
+        txtTillSuccess.textContent = "TILL SUCCESS (Search Until Found)";
+        depthVal.textContent = `${depthSlider.value} Candidates`;
+        appendLog(`[CONFIG] Search Depth mode: FIXED (${depthSlider.value} Candidates)`);
+      }
     });
 
     // Search Engine Switcher
@@ -1020,6 +1046,7 @@
       formData.append("tolerance", tolSlider.value);
       formData.append("engine", activeEngine);
       formData.append("max_candidates", depthSlider.value);
+      formData.append("until_success", isTillSuccess ? "true" : "false");
 
       try {
         // Stage 2 active after a brief moment

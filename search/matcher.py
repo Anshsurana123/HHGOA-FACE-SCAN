@@ -276,6 +276,7 @@ def find_verified_social_post(
     serpapi_key: str | None = None,
     imgbb_key: str | None = None,
     max_candidates: int = 35,
+    until_success: bool = False,
     include_general_web: bool = True,
     offline_demo: bool = False,
     offline_post_url: str | None = None,
@@ -285,8 +286,9 @@ def find_verified_social_post(
     1. Upload scan (face crop) to ImgBB -> public URL
     2. Query Visual Search Engine (Yandex Images primary / Google Lens / Hybrid)
     3. Rank candidates: social-platform matches first, then general web matches
-    4. Evaluate candidate pool up to max_candidates (configurable search depth)
-    5. Select the passing candidate with the strongest evidence tier and lowest cosine distance
+    4. Evaluate candidate pool:
+       - If `until_success=True`: evaluates all 300+ candidates until the first verified face match is found.
+       - If `until_success=False`: evaluates up to `max_candidates` and selects the best evidence tier/distance.
     """
     candidate_logs: list[dict[str, Any]] = []
 
@@ -361,7 +363,11 @@ def find_verified_social_post(
             reason=f"{active_engine_label} returned matches, but none were usable as web/social candidates.",
         )
 
-    candidates_to_eval = ordered_candidates[:max_candidates]
+    # If until_success is True, search the full candidate pool (all 300+ items)
+    if until_success:
+        candidates_to_eval = ordered_candidates
+    else:
+        candidates_to_eval = ordered_candidates[:max_candidates]
 
     passing: list[dict[str, Any]] = []
     for idx, candidate in enumerate(candidates_to_eval, start=1):
@@ -369,6 +375,9 @@ def find_verified_social_post(
         candidate_logs.append(log)
         if log.get("matched"):
             passing.append(log)
+            # In "until_success" mode, stop as soon as we find a confirmed match
+            if until_success:
+                break
 
     if not passing:
         return MatcherResult(
@@ -377,8 +386,8 @@ def find_verified_social_post(
             total_engine_matches=total_engine_matches,
             total_social_candidates=total_social_candidates,
             total_web_candidates=total_web_candidates,
-            reason=f"Evaluated {len(candidates_to_eval)} candidate(s) via {active_engine_label}, "
-                   f"none satisfied the face match tolerance (tol={tol}).",
+            reason=f"Evaluated {len(candidate_logs)} candidate(s) via {active_engine_label} "
+                   f"(until_success={until_success}), none satisfied tolerance (tol={tol}).",
         )
 
     # Best evidence tier first, then lowest distance within that tier.
@@ -401,5 +410,5 @@ def find_verified_social_post(
         accepted_distance=best["distance"],
         accepted_tier=best["tier"],
         reason=f"Best match via {active_engine_label}: {best['url']} (distance {best['distance']:.4f}, "
-               f"evidence tier: {TIER_LABELS[best['tier']]}).",
+               f"evidence tier: {TIER_LABELS[best['tier']]}, evaluated {len(candidate_logs)} candidates).",
     )
