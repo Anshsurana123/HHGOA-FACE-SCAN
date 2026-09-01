@@ -100,6 +100,16 @@
         transparent 2px
       );
     }
+
+    /* Collapsible Side Panel Animation */
+    #sidePanel {
+      transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-in-out;
+    }
+    #sidePanel.collapsed {
+      margin-left: -20rem; /* -320px */
+      opacity: 0;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body class="h-screen w-screen overflow-hidden flex flex-col selection:bg-signalGreen selection:text-bg text-sm">
@@ -107,6 +117,13 @@
   <!-- TOP APP HEADER -->
   <header class="h-14 border-b border-border bg-surface flex items-center justify-between px-6 shrink-0 z-20">
     <div class="flex items-center gap-3">
+      <!-- SIDEBAR TOGGLE BUTTON -->
+      <button id="btnToggleSidebar" class="p-1.5 rounded border border-border bg-surfaceElevated hover:border-signalGreen text-textSecondary hover:text-signalGreen transition-colors cursor-pointer flex items-center justify-center" title="Toggle Side Panel (Hide / Show)">
+        <svg id="iconSidebarToggle" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+        </svg>
+      </button>
+
       <div class="w-7 h-7 rounded border border-signalGreen/40 bg-signalGreen/10 flex items-center justify-center">
         <svg class="w-4 h-4 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -142,7 +159,19 @@
   <div class="flex-1 flex overflow-hidden">
 
     <!-- LEFT SIDEBAR: CONTROL & SCAN INPUT (~320px) -->
-    <aside class="w-80 border-r border-border bg-surface flex flex-col shrink-0 overflow-y-auto p-5 gap-5 z-10">
+    <aside id="sidePanel" class="w-80 border-r border-border bg-surface flex flex-col shrink-0 overflow-y-auto p-5 gap-5 z-10">
+
+      <!-- SIDEBAR HEADER WITH HIDE BUTTON -->
+      <div class="flex items-center justify-between pb-2 border-b border-border text-xs font-mono">
+        <span class="text-textMuted font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+          <svg class="w-3.5 h-3.5 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+          Controls & Scan
+        </span>
+        <button id="btnHideSidebar" class="px-2 py-0.5 rounded border border-border hover:border-signalGreen bg-surfaceElevated hover:text-signalGreen text-textMuted transition-colors flex items-center gap-1 text-[10px] cursor-pointer" title="Hide Side Panel">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+          <span>Hide</span>
+        </button>
+      </div>
 
       <!-- SECTION 1: SCAN SOURCE -->
       <div class="flex flex-col gap-2">
@@ -269,8 +298,14 @@
 
       <!-- PIPELINE 3-STEP TRACKER BAR -->
       <div class="h-14 border-b border-border bg-surface flex items-center justify-between px-6 shrink-0">
-        <div class="flex items-center gap-8 w-full max-w-4xl">
+        <div class="flex items-center gap-6 w-full max-w-4xl">
           
+          <!-- SHOW SIDEBAR BUTTON (Visible only when sidebar is collapsed) -->
+          <button id="btnShowSidebar" class="hidden shrink-0 px-2.5 py-1.5 rounded border border-signalGreen/40 bg-surfaceElevated hover:bg-signalGreen hover:text-bg text-signalGreen font-mono text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm" title="Show Side Panel">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+            <span>Show Panel</span>
+          </button>
+
           <!-- STEP 1 -->
           <div id="trackerStep1" class="flex items-center gap-3 text-textMuted font-mono text-xs">
             <div class="step-num w-6 h-6 rounded border border-border bg-surfaceElevated flex items-center justify-center font-bold">1</div>
@@ -1027,6 +1062,43 @@
     const logCount = document.getElementById("logCount");
     const btnToggleLog = document.getElementById("btnToggleLog");
     const logChevron = document.getElementById("logChevron");
+
+    // Sidebar Collapse / Expand Elements & Logic
+    const sidePanel = document.getElementById("sidePanel");
+    const btnToggleSidebar = document.getElementById("btnToggleSidebar");
+    const btnHideSidebar = document.getElementById("btnHideSidebar");
+    const btnShowSidebar = document.getElementById("btnShowSidebar");
+
+    function setSidebarCollapsed(collapsed) {
+      if (collapsed) {
+        sidePanel.classList.add("collapsed");
+        btnShowSidebar.classList.remove("hidden");
+        btnToggleSidebar.classList.add("text-signalGreen", "border-signalGreen");
+        btnToggleSidebar.title = "Show Side Panel";
+      } else {
+        sidePanel.classList.remove("collapsed");
+        btnShowSidebar.classList.add("hidden");
+        btnToggleSidebar.classList.remove("text-signalGreen", "border-signalGreen");
+        btnToggleSidebar.title = "Hide Side Panel";
+      }
+    }
+
+    function toggleSidebar() {
+      const isCollapsed = sidePanel.classList.contains("collapsed");
+      setSidebarCollapsed(!isCollapsed);
+    }
+
+    if (btnToggleSidebar) btnToggleSidebar.addEventListener("click", toggleSidebar);
+    if (btnHideSidebar) btnHideSidebar.addEventListener("click", () => setSidebarCollapsed(true));
+    if (btnShowSidebar) btnShowSidebar.addEventListener("click", () => setSidebarCollapsed(false));
+
+    // Keyboard shortcut: Ctrl+B / Cmd+B to toggle sidebar
+    window.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    });
 
     // Logger
     function appendLog(msg, colorClass = "text-textSecondary") {
