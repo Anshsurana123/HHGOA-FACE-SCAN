@@ -109,3 +109,16 @@ def test_extract_face_crop():
     assert len(emb) == 512
     assert "crop_box" in meta
     assert len(meta["crop_box"]) == 4
+
+
+def test_encode_all_faces():
+    """Validates that encode_all_faces returns a list of 512-d embeddings for all faces."""
+    from faceid import encode_all_faces
+    img_path = os.path.join(FIXTURES_DIR, "person1_a.jpg")
+    embs = encode_all_faces(img_path)
+
+    assert isinstance(embs, list)
+    assert len(embs) >= 1
+    for emb in embs:
+        assert len(emb) == 512
+        assert abs(np.linalg.norm(emb) - 1.0) < 1e-4

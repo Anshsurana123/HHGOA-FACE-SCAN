@@ -120,6 +120,38 @@ class FaceEncoder:
 
         return np.asarray(embedding, dtype=np.float32), metadata
 
+    def encode_all_faces(self, image_input: Union[str, bytes, np.ndarray]) -> list[tuple[np.ndarray, dict]]:
+        """
+        Detects all faces in the image and returns a list of (512-d normalized embedding, metadata dict) for every detected face.
+        """
+        img = self.read_image(image_input)
+        faces = self.app.get(img)
+        if not faces:
+            raise NoFaceFound("No face detected in the input image.")
+
+        results = []
+        for face in faces:
+            embedding = face.normed_embedding
+            if embedding is None:
+                raw = face.embedding
+                norm = np.linalg.norm(raw)
+                if norm == 0:
+                    continue
+                embedding = raw / norm
+            meta = {
+                "bbox": [float(c) for c in face.bbox],
+                "det_score": float(face.det_score) if hasattr(face, "det_score") else None,
+                "gender": int(face.gender) if hasattr(face, "gender") and face.gender is not None else None,
+                "age": int(face.age) if hasattr(face, "age") and face.age is not None else None,
+                "total_faces_detected": len(faces),
+            }
+            results.append((np.asarray(embedding, dtype=np.float32), meta))
+
+        if not results:
+            raise NoFaceFound("No valid face embeddings could be generated from detected faces.")
+
+        return results
+
 
 def encode_face(image_input: Union[str, bytes, np.ndarray]) -> np.ndarray:
     """Helper function returning 512-d embedding of the largest face in image."""
@@ -132,6 +164,13 @@ def encode_face_with_meta(image_input: Union[str, bytes, np.ndarray]) -> tuple[n
     """Helper function returning embedding + detection metadata."""
     encoder = FaceEncoder.get_instance()
     return encoder.encode_face(image_input)
+
+
+def encode_all_faces(image_input: Union[str, bytes, np.ndarray]) -> list[np.ndarray]:
+    """Helper function returning list of 512-d embeddings for all detected faces in the image."""
+    encoder = FaceEncoder.get_instance()
+    pairs = encoder.encode_all_faces(image_input)
+    return [emb for emb, _ in pairs]
 
 
 def extract_face_crop(

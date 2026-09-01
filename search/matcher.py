@@ -21,6 +21,7 @@ import numpy as np
 
 from faceid.encoder import (
     encode_face,
+    encode_all_faces,
     faces_match,
     cosine_distance,
     NoFaceFound,
@@ -184,15 +185,27 @@ def _evaluate_candidate(
         except Exception:
             pass
 
-    # Fallback to direct page scrape only if CDN image is missing
-    if not img_bytes:
+    # Step 2: Biometric Face Verification across all candidate faces
+    cand_embeddings = []
+    if img_bytes:
+        try:
+            cand_embeddings = encode_all_faces(img_bytes)
+        except (NoFaceFound, ImageReadError, Exception):
+            cand_embeddings = []
+
+    # Fallback to direct source page scrape if CDN image had no detectable face or was missing
+    if not cand_embeddings and verification_source != "page_image":
         try:
             post_data = fetch_post(url)
             log["author"] = post_data.get("author", "")
             log["text"] = post_data.get("text", "")
-            img_bytes = post_data.get("_image_bytes")
-            if img_bytes:
-                verification_source = "page_image"
+            page_img = post_data.get("_image_bytes")
+            if page_img:
+                page_embs = encode_all_faces(page_img)
+                if page_embs:
+                    img_bytes = page_img
+                    cand_embeddings = page_embs
+                    verification_source = "page_image"
         except Exception:
             pass
 
@@ -200,25 +213,39 @@ def _evaluate_candidate(
         log["_image_bytes"] = img_bytes
     log["verification_source"] = verification_source
 
-    if not img_bytes:
-        log["status"] = "REJECTED: No image could be retrieved from post or thumbnail."
+    if not cand_embeddings:
+        if not img_bytes:
+            log["status"] = "REJECTED: No image could be retrieved from post or thumbnail."
+        else:
+            log["status"] = "REJECTED: No face detected in candidate image."
         return log
 
-    # Step 2: Biometric Face Verification
-    try:
-        post_embedding = encode_face(img_bytes)
-    except NoFaceFound:
-        log["status"] = "REJECTED: No face detected in candidate image."
-        return log
-    except ImageReadError:
-        log["status"] = "REJECTED: Candidate image bytes could not be decoded."
-        return log
-    except Exception as e:
-        log["status"] = f"REJECTED: Face detection failed ({e})."
-        return log
-
-    dist = cosine_distance(input_embedding, post_embedding)
+    # Compare input face embedding against ALL faces in candidate image
+    distances = [cosine_distance(input_embedding, emb) for emb in cand_embeddings]
+    dist = min(distances)
     log["distance"] = round(dist, 4)
+
+    # If thumbnail distance was above threshold, do a final check with full-res page image
+    if dist >= tol and verification_source == "thumbnail_fallback":
+        try:
+            post_data = fetch_post(url)
+            page_img = post_data.get("_image_bytes")
+            if page_img:
+                page_embs = encode_all_faces(page_img)
+                if page_embs:
+                    page_dists = [cosine_distance(input_embedding, emb) for emb in page_embs]
+                    page_best = min(page_dists)
+                    if page_best < dist:
+                        dist = page_best
+                        log["distance"] = round(dist, 4)
+                        img_bytes = page_img
+                        log["_image_bytes"] = page_img
+                        verification_source = "page_image"
+                        log["verification_source"] = "page_image"
+                        log["author"] = post_data.get("author", "")
+                        log["text"] = post_data.get("text", "")
+        except Exception:
+            pass
 
     cand_ahash = _average_hash(img_bytes)
     ham = _hamming(input_ahash, cand_ahash)
@@ -236,7 +263,7 @@ def _evaluate_candidate(
     if dist < tol:
         log["matched"] = True
         dup_note = " [near-duplicate of input photo]" if is_dup else " [distinct photo]"
-        src_note = " (verified from source page)" if verification_source == "page_image" else " (WARNING: engine thumbnail fallback)"
+        src_note = " (verified from source page)" if verification_source == "page_image" else " (engine thumbnail fallback)"
         log["status"] = f"MATCH (cosine distance {dist:.4f} < {tol}){src_note}{dup_note}"
 
         # Lazy metadata enrichment for match
@@ -245,7 +272,8 @@ def _evaluate_candidate(
                 p_data = fetch_post(url)
                 log["author"] = p_data.get("author", "")
                 log["text"] = p_data.get("text", "")
-                if p_data.get("_image_bytes"):
+                if p_data.get("_image_bytes") and verification_source != "page_image":
+                    log["_image_bytes"] = p_data["_image_bytes"]
                     log["verification_source"] = "page_image"
                     log["tier"] = TIER_PAGE_IMAGE_DUPLICATE if is_dup else TIER_PAGE_IMAGE_UNIQUE
             except Exception:
