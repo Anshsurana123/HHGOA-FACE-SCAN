@@ -1209,19 +1209,77 @@
       reader.readAsDataURL(file);
     }
 
-    btnClearImage.addEventListener("click", () => {
+    function resetAllUI() {
       selectedImageFile = null;
       selectedSampleId = null;
       fileInput.value = "";
+      lastRecordPayload = null;
+
+      // 1. Input Dropzone
       dropzoneEmpty.classList.remove("hidden");
       dropzonePreview.classList.add("hidden");
       btnClearImage.classList.add("hidden");
+
+      // 2. Left Source Image Box
       imgSourceDisplay.src = "";
       imgSourceDisplay.classList.add("hidden");
       imgSourcePlaceholder.classList.remove("hidden");
       inputFaceMeta.textContent = "--";
-      appendLog("[INPUT] Cleared input image.");
-    });
+
+      // 3. Right Matched Post Image Box
+      imgMatchDisplay.src = "";
+      imgMatchDisplay.classList.add("hidden");
+      imgMatchPlaceholder.classList.remove("hidden");
+      matchPlatformTag.textContent = "--";
+      matchScoreBadge.textContent = "AWAITING SCAN";
+      matchScoreBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-signalGreen";
+
+      // 4. Accuracy Readout & Progress
+      readoutAccuracy.textContent = "--";
+      barAccuracy.style.width = "0%";
+      barAccuracy.className = "h-full bg-signalGreen transition-all duration-500";
+      valDistance.textContent = "--";
+      valTolerance.textContent = `< ${parseFloat(tolSlider.value).toFixed(2)}`;
+
+      // 5. Post Metadata
+      linkPostUrl.textContent = "--";
+      linkPostUrl.href = "#";
+      txtAuthor.textContent = "--";
+      txtPostSnippet.textContent = "--";
+
+      // 6. Blockchain Proof Box
+      proofStatusBadge.textContent = "UNANCHORED";
+      proofStatusBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-textMuted";
+      txtContentHash.textContent = "--";
+      lblTxOrBlock.textContent = activeNetwork === "local" ? "LOCAL BLOCK HASH" : "POLYGON TRANSACTION HASH";
+      txtTxOrBlock.textContent = "--";
+      txtBlockIndex.textContent = "--";
+      txtTimestamp.textContent = "--";
+
+      // 7. Buttons
+      btnVerify.disabled = true;
+      btnTamper.disabled = true;
+      btnExplorer.classList.add("hidden");
+      btnViewResultsModal.disabled = true;
+      btnHeaderCandidates.classList.add("hidden");
+      btnHeaderCandidatesText.textContent = "Evaluated Candidates (0)";
+      btnViewCandidatesText.textContent = "Evaluated Candidates (0)";
+      btnBannerViewErrorVerifyProof.classList.add("hidden");
+
+      // 8. Candidates Table & Modal
+      candidateCountBadge.textContent = "0 CANDIDATES";
+      tblCandidatesBody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-textMuted font-mono">Run a scan to evaluate visual candidates.</td></tr>`;
+      modalCandidatesList.innerHTML = `<div class="p-8 text-center text-textMuted font-mono">No scan executed yet. Run a search to populate candidate matches.</div>`;
+
+      // 9. Pipeline Stepper & Banners
+      resetPipelineTracker();
+      hideBanners();
+      bannerGuide.classList.remove("hidden");
+
+      appendLog("[RESET] System state and comparator displays cleared to initial ready state.");
+    }
+
+    btnClearImage.addEventListener("click", resetAllUI);
 
     // Sample Presets
     document.querySelectorAll(".btn-sample").forEach((btn) => {
