@@ -110,6 +110,145 @@ def search_google_lens(
             if attempt < max_retries:
                 time.sleep(1.0)
                 continue
-            raise LensSearchError(f"Google Lens search failed after {max_retries + 1} attempt(s): {exc}") from exc
-
     raise LensSearchError(f"Google Lens search failed: {last_error}")
+
+
+def search_google_images(
+    query: str,
+    api_key: str | None = None,
+    timeout: int = 15,
+) -> list[dict[str, Any]]:
+    """
+    Queries SerpApi Google Images with text keywords (e.g. from OCR extraction).
+    Returns list of candidate dictionaries with title, link, thumbnail, and original_image.
+    """
+    key = api_key or os.getenv("SERPAPI_KEY")
+    if not key or not query:
+        return []
+
+    try:
+        response = requests.get(
+            "https://serpapi.com/search",
+            params={
+                "engine": "google_images",
+                "q": query,
+                "api_key": key,
+                "num": 30,
+            },
+            headers={"User-Agent": DEFAULT_USER_AGENT},
+            timeout=timeout,
+        )
+        if response.status_code == 200:
+            data = response.json()
+            candidates: list[dict[str, Any]] = []
+            for item in data.get("images_results", []):
+                link = item.get("link")
+                if link:
+                    candidates.append({
+                        "title": item.get("title", ""),
+                        "link": link,
+                        "source": item.get("source", "Google Images"),
+                        "thumbnail": item.get("thumbnail") or item.get("original", ""),
+                        "original_image": item.get("original", ""),
+                        "position": len(candidates) + 1,
+                    })
+            return candidates
+    except Exception:
+        pass
+
+    return []
+
+
+def search_social_index(
+    query: str,
+    platform: str = "x.com",
+    api_key: str | None = None,
+    timeout: int = 15,
+) -> list[dict[str, Any]]:
+    """
+    Searches indexed posts on gated platforms (e.g. x.com, linkedin.com, instagram.com)
+    via SerpApi Google Search (site:platform query).
+    Returns list of candidate dictionaries with title, link, snippet, and position.
+    """
+    key = api_key or os.getenv("SERPAPI_KEY")
+    if not key or not query:
+        return []
+
+    full_query = f"site:{platform} {query}" if not query.startswith("site:") else query
+    try:
+        response = requests.get(
+            "https://serpapi.com/search",
+            params={
+                "engine": "google",
+                "q": full_query,
+                "api_key": key,
+                "num": 20,
+            },
+            headers={"User-Agent": DEFAULT_USER_AGENT},
+            timeout=timeout,
+        )
+        if response.status_code == 200:
+            data = response.json()
+            candidates: list[dict[str, Any]] = []
+            for item in data.get("organic_results", []):
+                link = item.get("link")
+                if link:
+                    candidates.append({
+                        "title": item.get("title", ""),
+                        "link": link,
+                        "source": f"Google Search ({platform})",
+                        "snippet": item.get("snippet", ""),
+                        "thumbnail": item.get("thumbnail", ""),
+                        "position": len(candidates) + 1,
+                    })
+            return candidates
+    except Exception:
+        pass
+    return []
+
+
+def search_google_web(
+    query: str,
+    api_key: str | None = None,
+    timeout: int = 15,
+    num: int = 10,
+) -> list[dict[str, Any]]:
+    """
+    Queries SerpApi Google Search engine with arbitrary text queries.
+    Returns list of candidate dictionaries with title, link, snippet, and position.
+    """
+    key = api_key or os.getenv("SERPAPI_KEY")
+    if not key or not query:
+        return []
+
+    try:
+        response = requests.get(
+            "https://serpapi.com/search",
+            params={
+                "engine": "google",
+                "q": query,
+                "api_key": key,
+                "num": num,
+            },
+            headers={"User-Agent": DEFAULT_USER_AGENT},
+            timeout=timeout,
+        )
+        if response.status_code == 200:
+            data = response.json()
+            candidates: list[dict[str, Any]] = []
+            for item in data.get("organic_results", []):
+                link = item.get("link")
+                if link:
+                    candidates.append({
+                        "title": item.get("title", ""),
+                        "link": link,
+                        "source": "Google Web Search",
+                        "snippet": item.get("snippet", ""),
+                        "thumbnail": item.get("thumbnail", ""),
+                        "position": len(candidates) + 1,
+                    })
+            return candidates
+    except Exception:
+        pass
+    return []
+

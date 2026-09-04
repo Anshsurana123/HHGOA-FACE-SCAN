@@ -100,3 +100,57 @@ def test_yandex_client_error_handling():
     from search.yandex_client import search_yandex_images, YandexSearchError
     with pytest.raises(YandexSearchError):
         search_yandex_images("https://invalid.example.com/test.jpg", api_key="")
+
+
+def test_twitter_image_resolution_upgrade():
+    """Validates upgrading Twitter CDN URLs from low-res thumbnails to original/400x400."""
+    from search.post_extractor import _upgrade_twitter_image_url
+    
+    avatar_url = "https://pbs.twimg.com/profile_images/123456/photo_normal.jpg"
+    upgraded_avatar = _upgrade_twitter_image_url(avatar_url)
+    assert "photo_400x400.jpg" in upgraded_avatar
+
+    media_url = "https://pbs.twimg.com/media/F123456?format=jpg&name=small"
+    upgraded_media = _upgrade_twitter_image_url(media_url)
+    assert "name=orig" in upgraded_media
+
+
+def test_x_post_and_profile_live_extraction():
+    """Validates live extraction of X post and profile metadata."""
+    from search.post_extractor import fetch_post
+
+    # Test real public tweet (Jack Dorsey tweet #20)
+    jack_post = fetch_post("https://twitter.com/jack/status/20")
+    assert jack_post["platform"] == "x"
+    assert jack_post["author"] == "@jack"
+    assert "just setting up my twttr" in jack_post["text"]
+    assert jack_post["_image_url"] != ""
+    assert jack_post["image_sha256"] != ""
+
+    # Test real public profile (Barack Obama)
+    obama_profile = fetch_post("https://x.com/BarackObama")
+    assert obama_profile["platform"] == "x"
+    assert obama_profile["author"] == "@BarackObama"
+    assert "Barack Obama" in obama_profile["text"]
+    assert obama_profile["_image_url"] != ""
+    assert obama_profile["image_sha256"] != ""
+
+
+def test_candidate_deduplication():
+    """Validates that candidate lists are deduplicated across URLs and duplicate thumbnail URLs."""
+    from search.matcher import _merge_candidate_lists
+
+    cands1 = [
+        {"link": "https://in.linkedin.com/in/user-one", "thumbnail": "https://cdn.example.com/photo1.jpg"},
+        {"link": "https://www.linkedin.com/posts/activity-1", "thumbnail": "https://cdn.example.com/photo1.jpg"},  # Dup thumbnail
+    ]
+    cands2 = [
+        {"link": "https://www.linkedin.com/in/user-one", "thumbnail": "https://cdn.example.com/photo1.jpg"},       # Dup canonical URL & thumb
+        {"link": "https://x.com/user2/status/100", "thumbnail": "https://cdn.example.com/photo2.jpg"},             # Unique
+    ]
+
+    merged = _merge_candidate_lists(cands1, cands2)
+    assert len(merged) == 2
+    assert merged[0]["link"] == "https://in.linkedin.com/in/user-one"
+    assert merged[1]["link"] == "https://x.com/user2/status/100"
+

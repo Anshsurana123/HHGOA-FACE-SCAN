@@ -41,6 +41,7 @@ from chain.anchor import (
 )
 from chain.local_chain import LocalBlockchain
 from chain.web3_client import Web3Client, PolygonAmoyClient
+from agent.researcher import ResearchAgent
 
 # Initialize directories
 BASE_DIR = Path(__file__).resolve().parent
@@ -124,6 +125,91 @@ async def get_chain_status(network: str = Query("local", enum=["local", "amoy"])
             })
 
 
+@app.post("/api/detect")
+async def detect_face_endpoint(
+    image: UploadFile = File(None),
+    sample_id: str = Form(None),
+    manual_crop: bool = Form(False),
+):
+    """
+    Fast Biometric Extraction Endpoint:
+    1. Runs InsightFace detection on uploaded image.
+    2. Extracts 68 3D landmarks, 106 2D dense landmarks, 3D head pose angles, demographics, det score.
+    3. Computes canonical Umeyama affine alignment and 0.35-margin face crop.
+    4. Extracts OCR text & keywords.
+    5. Saves out/last_scan.jpg, out/cropped_face.jpg, out/canonical_face.jpg.
+    Returns rich telemetry payload for instant UI rendering.
+    """
+    image_bytes = b""
+    if image and image.filename:
+        image_bytes = await image.read()
+    elif sample_id:
+        sample_path = DEMO_DIR / sample_id
+        if sample_path.exists():
+            image_bytes = sample_path.read_bytes()
+
+    if not image_bytes:
+        return JSONResponse(status_code=400, content={"success": False, "error": "No image supplied."})
+
+    # Save to out/last_scan.jpg
+    last_scan_path = OUT_DIR / "last_scan.jpg"
+    last_scan_path.write_bytes(image_bytes)
+
+    try:
+        if manual_crop:
+            cropped_face_bytes = image_bytes
+            embedding, face_meta = encode_face_with_meta(image_bytes)
+            crop_path = OUT_DIR / "cropped_face.jpg"
+            crop_path.write_bytes(cropped_face_bytes)
+        else:
+            cropped_face_bytes, embedding, face_meta = extract_face_crop(image_bytes, margin=0.35)
+            crop_path = OUT_DIR / "cropped_face.jpg"
+            crop_path.write_bytes(cropped_face_bytes)
+
+        # Canonical Umeyama Aligned Face
+        canonical_face_url = "/out/cropped_face.jpg"
+        try:
+            from faceid.encoder import extract_canonical_aligned_face
+            canon_bytes, _, _ = extract_canonical_aligned_face(image_bytes, image_size=224)
+            canon_path = OUT_DIR / "canonical_face.jpg"
+            canon_path.write_bytes(canon_bytes)
+            canonical_face_url = "/out/canonical_face.jpg"
+        except Exception:
+            pass
+        face_meta["canonical_face_url"] = canonical_face_url
+
+        # OCR text cues
+        ocr_info = {"keywords": []}
+        try:
+            from search.ocr_extractor import extract_image_text_and_keywords
+            ocr_info = extract_image_text_and_keywords(image_bytes)
+        except Exception:
+            pass
+        face_meta["ocr_keywords"] = ocr_info.get("keywords", [])
+        face_meta["ocr_full_text"] = ocr_info.get("full_text", "")
+
+        return JSONResponse({
+            "success": True,
+            "face": face_meta,
+            "input_image_url": "/out/last_scan.jpg",
+            "cropped_face_url": "/out/cropped_face.jpg",
+            "canonical_face_url": canonical_face_url,
+        })
+    except NoFaceFound:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error": "No human face detected in the input image. Please supply a clear portrait or headshot.",
+            },
+        )
+    except Exception as exc:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": f"Face identification failed: {exc}"},
+        )
+
+
 @app.post("/api/run")
 async def run_pipeline(
     image: UploadFile = File(None),
@@ -133,7 +219,7 @@ async def run_pipeline(
     tolerance: float = Form(0.35),
     engine: str = Form("google_lens"),
     max_candidates: int = Form(35),
-    until_success: bool = Form(False),
+    until_success: bool = Form(True),
     manual_crop: bool = Form(False),
     offline_demo: bool = Form(False),
 ):
@@ -227,9 +313,38 @@ async def run_pipeline(
             crop_path.write_bytes(cropped_face_bytes)
             cropped_face_url = "/out/cropped_face.jpg"
 
+            # Save canonical Umeyama aligned face to out/canonical_face.jpg
+            canonical_face_url = "/out/cropped_face.jpg"
+            try:
+                from faceid.encoder import extract_canonical_aligned_face
+                canon_bytes, _, _ = extract_canonical_aligned_face(full_search_bytes, image_size=224)
+                canon_path = OUT_DIR / "canonical_face.jpg"
+                canon_path.write_bytes(canon_bytes)
+                canonical_face_url = "/out/canonical_face.jpg"
+            except Exception:
+                pass
+            face_meta["canonical_face_url"] = canonical_face_url
+
+            # Extract OCR identity text cues if available
+            ocr_info = {"keywords": []}
+            try:
+                from search.ocr_extractor import extract_image_text_and_keywords
+                ocr_info = extract_image_text_and_keywords(full_search_bytes)
+            except Exception:
+                pass
+            face_meta["ocr_keywords"] = ocr_info.get("keywords", [])
+            face_meta["ocr_full_text"] = ocr_info.get("full_text", "")
+
             log(f"InsightFace detected {total_faces} face(s) in {elapsed_face:.2f}s.")
             log(f"Primary face bbox: {face_meta.get('bbox')}, confidence: {score:.4f}")
-            log(f"Extracted focused facial crop ({len(cropped_face_bytes)} bytes) for reverse image search.")
+            if face_meta.get("pose"):
+                p, y, r = face_meta["pose"]
+                log(f"3D Head Pose: pitch={p:.1f}°, yaw={y:.1f}°, roll={r:.1f}°")
+            if face_meta.get("landmark_3d_68"):
+                log(f"Extracted 68-Point 3D Landmark Mesh & 106-Point Dense Fiducial Topology.")
+            if face_meta.get("ocr_keywords"):
+                log(f"Multi-Modal OCR detected identity cues: {face_meta['ocr_keywords']}")
+            log(f"Extracted focused facial crop & canonical Umeyama alignment for reverse search.")
     except NoFaceFound:
         log("ERROR: No human face detected in the input scan.")
         return JSONResponse(
@@ -261,21 +376,34 @@ async def run_pipeline(
 
     start_search_t = time.time()
     try:
-        matcher_result: MatcherResult = find_verified_social_post(
-            input_embedding=embedding,
-            image_path_or_bytes=full_search_bytes,
-            cropped_face_bytes=cropped_face_bytes,
-            tol=tolerance,
-            engine=engine,
-            serpapi_key=serpapi_key,
-            imgbb_key=imgbb_key,
-            max_candidates=max_candidates,
-            until_success=until_success,
-            offline_demo=offline_demo,
-        )
+        if engine.lower() == "agent":
+            agent = ResearchAgent(max_iterations=min(20, max_candidates if not until_success else 20))
+            matcher_result = agent.run(
+                input_image_bytes=full_search_bytes,
+                input_image_path=str(last_scan_path),
+                target_embedding=embedding,
+                target_face_meta=face_meta,
+                tolerance=tolerance,
+                offline_demo=offline_demo,
+            )
+        else:
+            matcher_result = find_verified_social_post(
+                input_embedding=embedding,
+                image_path_or_bytes=full_search_bytes,
+                cropped_face_bytes=cropped_face_bytes,
+                tol=tolerance,
+                engine=engine,
+                serpapi_key=serpapi_key,
+                imgbb_key=imgbb_key,
+                max_candidates=max_candidates,
+                until_success=until_success,
+                offline_demo=offline_demo,
+                ocr_keywords=face_meta.get("ocr_keywords", []),
+            )
         elapsed_search = time.time() - start_search_t
         log(f"Search executed in {elapsed_search:.2f}s via {matcher_result.search_engine}.")
         log(f"Raw engine matches: {matcher_result.total_engine_matches}, Social candidates: {matcher_result.total_social_candidates}, Web: {matcher_result.total_web_candidates}")
+
 
         cand_dir = OUT_DIR / "candidates"
         cand_dir.mkdir(parents=True, exist_ok=True)
@@ -285,7 +413,8 @@ async def run_pipeline(
             cand_dist = cand.get("distance")
             cand_status = cand.get("status", "")
             dist_str = f"dist={cand_dist:.4f}" if cand_dist is not None else "no_face"
-            log(f"Candidate [{cand.get('platform', 'unknown')}]: {cand_url[:50]}... ({dist_str}) -> {cand_status}")
+            dup_tag = f" [DUP OF #{cand['duplicate_of']}]" if cand.get("is_duplicate_candidate") else ""
+            log(f"Candidate [{cand.get('platform', 'unknown')}]{dup_tag}: {cand_url[:50]}... ({dist_str}) -> {cand_status}")
 
             # Persist candidate image locally if downloaded bytes are present
             if cand.get("_image_bytes"):
@@ -437,6 +566,18 @@ async def run_pipeline(
         "blockchain_anchor": anchor_info,
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
+
+    if getattr(matcher_result, "evidence_graph", None):
+        record_payload["research"] = {
+            "iterations": getattr(matcher_result, "iterations", 1),
+            "total_queries": getattr(matcher_result, "total_queries", 0),
+            "total_pages_opened": getattr(matcher_result, "total_pages_opened", 0),
+            "total_images_collected": getattr(matcher_result, "total_images_collected", 0),
+            "evidence_chain": getattr(matcher_result, "evidence_chain", []),
+            "evidence_graph": matcher_result.evidence_graph.to_dict() if hasattr(matcher_result.evidence_graph, "to_dict") else {},
+            "state_summary": getattr(matcher_result, "state_summary", {}),
+        }
+
     record_file_path = OUT_DIR / "record.json"
     with open(record_file_path, "w", encoding="utf-8") as f:
         json.dump(record_payload, f, indent=2, ensure_ascii=False)
@@ -458,11 +599,16 @@ async def run_pipeline(
         },
         "input_image_url": "/out/last_scan.jpg",
         "cropped_face_url": cropped_face_url,
+        "canonical_face_url": canonical_face_url,
         "matched_image_url": matched_image_url,
         "anchor": anchor_info,
         "candidates": matcher_result.candidate_logs,
+        "evidence_graph": matcher_result.evidence_graph.to_dict() if getattr(matcher_result, "evidence_graph", None) else None,
+        "evidence_chain": getattr(matcher_result, "evidence_chain", []),
+        "research_provenance": getattr(matcher_result, "state_summary", {}),
         "logs": logs,
     })
+
 
 
 @app.post("/api/verify")
@@ -629,8 +775,14 @@ async def simulate_tamper(network: str = Form(None)):
 
 if __name__ == "__main__":
     import uvicorn
+    import sys
     print("=" * 70)
     print("  HH-FaceChain Verification Console (Localhost Presentation UI)")
     print("  Dashboard: http://localhost:8000")
     print("=" * 70)
-    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
+    try:
+        uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
+    except BaseException as exc:
+        print(f"SERVER TERMINATED WITH: {type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
+        raise
+

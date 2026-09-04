@@ -10,6 +10,13 @@ from typing import Any
 import click
 from dotenv import load_dotenv
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 # Load .env configuration
 load_dotenv()
 load_dotenv(".env.txt")
@@ -28,6 +35,8 @@ from search.post_extractor import fetch_post
 from chain.anchor import make_canonical_record, compute_record_hash
 from chain.local_chain import LocalBlockchain, LocalChainError
 from chain.web3_client import Web3Client, Web3ChainError
+from agent.researcher import ResearchAgent
+
 
 
 def _print_banner():
@@ -56,7 +65,7 @@ def cli():
 @click.option("--image", "-i", required=True, type=click.Path(exists=True), help="Path to input face scan image.")
 @click.option("--network", "-n", type=click.Choice(["local", "amoy"], case_sensitive=False), default="local", show_default=True, help="Blockchain network to anchor record.")
 @click.option("--tol", "-t", type=float, default=DEFAULT_TOLERANCE, show_default=True, help="Cosine distance tolerance threshold for face match.")
-@click.option("--engine", "-e", type=click.Choice(["google_lens", "yandex", "hybrid"], case_sensitive=False), default="google_lens", show_default=True, help="Visual reverse search engine (Google Lens is social primary).")
+@click.option("--engine", "-e", type=click.Choice(["google_lens", "yandex", "hybrid", "agent"], case_sensitive=False), default="google_lens", show_default=True, help="Visual reverse search engine or 'agent' for autonomous multi-hop OSINT.")
 @click.option("--max-candidates", "-m", type=int, default=35, show_default=True, help="Search depth (number of visual candidates to evaluate).")
 @click.option("--until-success", is_flag=True, default=False, help="Search continuously across the full 300+ candidate pool until a match is found.")
 @click.option("--offline-demo", is_flag=True, default=False, help="Run search in offline demonstration mode without external API calls.")
@@ -104,24 +113,39 @@ def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: i
     # STAGE 2: Genuine Web/Social Reverse Search & Verification
     # =========================================================================
     click.secho(f"\n--- STAGE 2: Genuine Social Media Search ({engine.upper()}) & Face Re-Match ---", fg="blue", bold=True)
-    try:
-        match_result = find_verified_social_post(
-            input_embedding=embedding,
-            image_path_or_bytes=image,
-            cropped_face_bytes=cropped_face_bytes,
-            tol=tol,
-            engine=engine,
-            max_candidates=max_candidates,
-            until_success=until_success,
-            offline_demo=offline_demo,
-        )
 
-        if match_result.imgbb_url:
+    try:
+        if engine.lower() == "agent":
+            with open(image, "rb") as f:
+                full_img_bytes = f.read()
+            agent = ResearchAgent(max_iterations=min(20, max_candidates if not until_success else 20))
+            match_result = agent.run(
+                input_image_bytes=full_img_bytes,
+                input_image_path=image,
+                target_embedding=embedding,
+                target_face_meta=meta,
+                tolerance=tol,
+                offline_demo=offline_demo,
+            )
+        else:
+            match_result = find_verified_social_post(
+                input_embedding=embedding,
+                image_path_or_bytes=image,
+                cropped_face_bytes=cropped_face_bytes,
+                tol=tol,
+                engine=engine,
+                max_candidates=max_candidates,
+                until_success=until_success,
+                offline_demo=offline_demo,
+            )
+
+        if getattr(match_result, "imgbb_url", None):
             click.echo(f" [*] Uploaded scan to ImgBB: {match_result.imgbb_url}")
         click.echo(f" [*] Search engine used: {match_result.search_engine}")
         click.echo(f" [*] Raw matches found: {match_result.total_engine_matches}")
         click.echo(f" [*] Filtered social candidates: {match_result.total_social_candidates}")
         click.echo(f" [*] Filtered web candidates: {match_result.total_web_candidates}")
+
 
         click.secho("\n Candidate Evaluation Logs:", bold=True)
         for cand in match_result.candidate_logs:
@@ -145,6 +169,11 @@ def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: i
         click.echo(f"      - Author: {post_record.get('author') or 'N/A'}")
         click.echo(f"      - Cosine Distance: {dist:.4f} (threshold: < {tol})")
         click.echo(f"      - Image SHA-256: {post_record.get('image_sha256')}")
+
+        if getattr(match_result, "evidence_chain", None):
+            click.secho("\n Multi-Hop OSINT Evidence Trail:", fg="cyan", bold=True)
+            for step_idx, node in enumerate(match_result.evidence_chain, start=1):
+                click.echo(f"   ({step_idx}) [{node.get('type')}] {node.get('label')}")
 
     except Exception as e:
         click.secho(f" [ERROR] Stage 2 Failed: {e}", fg="red", bold=True)
@@ -171,8 +200,8 @@ def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: i
             click.echo(f"      - Block Index: #{anchor_info['block_index']}")
             click.echo(f"      - Block Hash: {anchor_info['block_hash']}")
             click.echo(f"      - Previous Hash: {anchor_info['prev_hash']}")
-            click.echo(f"      - Proof-of-Work Nonce: {anchor_info['nonce']}")
-            click.echo(f"      - Timestamp: {anchor_info['anchored_at']}")
+            click.echo(f"      - Proof-of-Work Nonce: {anchor_info.get('nonce')}")
+            click.echo(f"      - Timestamp: {anchor_info.get('anchored_at_iso') or anchor_info.get('timestamp')}")
         except LocalChainError as e:
             click.secho(f" [WARNING] Local Chain: {e}", fg="yellow")
             anchor_info = {"network": "local", "content_hash": content_hash, "post_url": post_url, "already_anchored": True}
@@ -225,8 +254,20 @@ def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: i
         "created_at_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
 
+    if getattr(match_result, "evidence_graph", None):
+        saved_data["research"] = {
+            "iterations": getattr(match_result, "iterations", 1),
+            "total_queries": getattr(match_result, "total_queries", 0),
+            "total_pages_opened": getattr(match_result, "total_pages_opened", 0),
+            "total_images_collected": getattr(match_result, "total_images_collected", 0),
+            "evidence_chain": getattr(match_result, "evidence_chain", []),
+            "evidence_graph": match_result.evidence_graph.to_dict() if hasattr(match_result.evidence_graph, "to_dict") else {},
+            "state_summary": getattr(match_result, "state_summary", {}),
+        }
+
     with open(record_file, "w", encoding="utf-8") as f:
         json.dump(saved_data, f, indent=2, ensure_ascii=False)
+
 
     if post_record.get("_image_bytes"):
         with open(image_file, "wb") as f:
@@ -245,7 +286,7 @@ def run_cmd(image: str, network: str, tol: float, engine: str, max_candidates: i
 @cli.command("search")
 @click.option("--image", "-i", required=True, type=click.Path(exists=True), help="Path to input face scan image.")
 @click.option("--tol", "-t", type=float, default=DEFAULT_TOLERANCE, show_default=True, help="Cosine distance tolerance threshold.")
-@click.option("--engine", "-e", type=click.Choice(["google_lens", "yandex", "hybrid"], case_sensitive=False), default="google_lens", show_default=True, help="Visual reverse search engine (Google Lens primary).")
+@click.option("--engine", "-e", type=click.Choice(["google_lens", "yandex", "hybrid", "agent"], case_sensitive=False), default="google_lens", show_default=True, help="Visual reverse search engine or 'agent' for autonomous multi-hop OSINT.")
 @click.option("--max-candidates", "-m", type=int, default=35, show_default=True, help="Search depth (number of visual candidates to evaluate).")
 @click.option("--until-success", is_flag=True, default=False, help="Search continuously across the full 300+ candidate pool until a match is found.")
 @click.option("--offline-demo", is_flag=True, default=False, help="Run search in offline demonstration mode.")
@@ -267,21 +308,35 @@ def search_cmd(image: str, tol: float, engine: str, max_candidates: int, until_s
         sys.exit(1)
 
     try:
-        match_result = find_verified_social_post(
-            input_embedding=embedding,
-            image_path_or_bytes=image,
-            cropped_face_bytes=cropped_face_bytes,
-            tol=tol,
-            engine=engine,
-            max_candidates=max_candidates,
-            until_success=until_success,
-            offline_demo=offline_demo,
-        )
+        if engine.lower() == "agent":
+            with open(image, "rb") as f:
+                full_img_bytes = f.read()
+            agent = ResearchAgent(max_iterations=min(20, max_candidates if not until_success else 20))
+            match_result = agent.run(
+                input_image_bytes=full_img_bytes,
+                input_image_path=image,
+                target_embedding=embedding,
+                target_face_meta=meta,
+                tolerance=tol,
+                offline_demo=offline_demo,
+            )
+        else:
+            match_result = find_verified_social_post(
+                input_embedding=embedding,
+                image_path_or_bytes=image,
+                cropped_face_bytes=cropped_face_bytes,
+                tol=tol,
+                engine=engine,
+                max_candidates=max_candidates,
+                until_success=until_success,
+                offline_demo=offline_demo,
+            )
 
         click.echo(f" [*] Search engine used: {match_result.search_engine}")
         click.echo(f" [*] Raw matches found: {match_result.total_engine_matches}")
         click.echo(f" [*] Filtered social candidates: {match_result.total_social_candidates}")
         click.echo(f" [*] Filtered web candidates: {match_result.total_web_candidates}")
+
 
         click.secho("\n Candidate Evaluation:", bold=True)
         for cand in match_result.candidate_logs:

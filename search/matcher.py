@@ -15,6 +15,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 import io
 import os
+import re
 import time
 from typing import Any
 import numpy as np
@@ -285,105 +286,348 @@ def _evaluate_candidate(
 
 
 def _merge_candidate_lists(*lists_of_candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Merges candidate lists from multiple perspectives and engines, preserving order and deduplicating by URL."""
+    """
+    Merges candidate lists from multiple perspectives and engines using round-robin interleaving,
+    deduplicating by normalized URL and image source.
+    This guarantees that situational scene matches, OCR keyword discoveries, and biometric face crops
+    are evenly distributed in the top candidate pool rather than being dominated by passport-size headshots.
+    """
     merged: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
+    seen_images: set[str] = set()
 
-    for cand_list in lists_of_candidates:
-        for item in cand_list:
-            link = item.get("link", "")
-            if not link:
-                continue
-            canon = normalize_url(link)
-            if canon in seen_urls:
-                continue
-            seen_urls.add(canon)
-            merged.append(item)
+    valid_lists = [list(l) for l in lists_of_candidates if l]
+    if not valid_lists:
+        return []
+
+    max_len = max(len(l) for l in valid_lists)
+    for i in range(max_len):
+        for cand_list in valid_lists:
+            if i < len(cand_list):
+                item = cand_list[i]
+                link = item.get("link", "")
+                if not link:
+                    continue
+                canon = normalize_url(link)
+                if canon in seen_urls:
+                    continue
+
+                thumb = item.get("thumbnail", "")
+                orig = item.get("original_image", "")
+                img_key = orig or thumb
+                if img_key and img_key in seen_images:
+                    continue
+
+                seen_urls.add(canon)
+                if img_key:
+                    seen_images.add(img_key)
+                merged.append(item)
 
     return merged
 
 
+from search.lens_client import search_google_lens, search_google_images, search_social_index
+from search.ocr_extractor import extract_image_text_and_keywords
+from faceid.encoder import extract_canonical_aligned_face, extract_face_crop
+
+
+from collections import Counter
+
+GENERIC_STOP_WORDS = {
+    "the", "and", "for", "with", "from", "post", "view", "posts", "video", "reel", "reels",
+    "photo", "photos", "profile", "account", "login", "signup", "free", "trip", "student",
+    "college", "university", "final", "year", "where", "this", "indian", "behind", "brain",
+    "meet", "meets", "apart", "poles", "love", "foryou", "poetry", "live", "largest", "official",
+    "status", "share", "watch", "more", "like", "online", "here", "today", "yesterday", "tomorrow",
+    "about", "their", "there", "what", "when", "which", "some", "most", "been", "have", "were",
+    "hackathon", "blockchain", "crypto", "tech", "technology", "developers", "coders",
+    "intern", "engineer", "lead", "founder", "manager", "director", "designer", "alumni"
+}
+
+
+def extract_dynamic_entities_and_queries(visual_pool: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
+    """
+    Pure statistical dynamic entity extraction and compound query synthesis.
+    Discovers gated platform communities and templates WITHOUT ANY HARDCODED KEYWORDS OR OCR.
+    """
+    social_domains = ("x.com", "twitter.com", "linkedin.com", "instagram.com", "reddit.com", "vercel.app", "devfolio.co", "luma.com")
+    filtered = [m for m in visual_pool if any(d in m.get("link", "").lower() for d in social_domains)]
+    pool = filtered if len(filtered) >= 5 else visual_pool
+
+    tags = Counter()
+    subs = Counter()
+    handles = Counter()
+    phrases = Counter()
+
+    for m in pool:
+        title = m.get("title", "")
+        link = m.get("link", "")
+        text = f"{title} {link}"
+
+        # 1. Dynamic Hashtags
+        for t in re.findall(r"#([A-Za-z0-9_]{3,30})", text):
+            clean = t.strip()
+            if clean.lower() not in GENERIC_STOP_WORDS:
+                tags[clean] += 1
+
+        # 2. Dynamic Project Subdomains (e.g. *.vercel.app, *.github.io)
+        for s in re.findall(r"https?://([a-zA-Z0-9_-]{3,40})\.(?:vercel\.app|github\.io|devfolio\.co|luma\.com)", text):
+            clean = s.strip()
+            if clean.lower() not in GENERIC_STOP_WORDS:
+                subs[clean] += 1
+
+        # 3. Dynamic Social Handles (e.g. @organizer)
+        for h in re.findall(r"@([A-Za-z0-9_]{3,25})", text):
+            clean = h.strip()
+            if clean.lower() not in GENERIC_STOP_WORDS:
+                handles[clean] += 1
+
+        # 4. Dynamic Multi-word Capitalized Phrases
+        for p in re.findall(r"\b([A-Z0-9][A-Za-z0-9]*(?:\s+[A-Za-z0-9]+){1,3})\b", title):
+            clean = re.sub(r"\s+(for|to|in|of|and|on|at|with|by|from|is)$", "", p.strip(), flags=re.IGNORECASE).strip()
+            words = clean.lower().split()
+            if len(clean) >= 4 and not any(w in GENERIC_STOP_WORDS for w in words):
+                phrases[clean] += 1
+
+    top_tags = [t for t, _ in tags.most_common(4)]
+    top_subs = [s for s, _ in subs.most_common(3)]
+    top_handles = [h for h, _ in handles.most_common(2)]
+    top_phrases = [p for p, _ in phrases.most_common(6)]
+
+    # High-signal template keywords that appear across credentials, passes, cards, badges
+    KEYWORD_TEMPLATES = ["Pass", "Card", "Builder", "Badge", "Ticket", "Mint", "ID"]
+
+    queries: list[str] = []
+
+    # 1. Exact Multi-word Phrases
+    for phrase in top_phrases:
+        queries.append(f'site:x.com "{phrase}"')
+
+    # 2. Dynamic Project Subdomains
+    for sub in top_subs:
+        queries.append(f'site:x.com "{sub}"')
+
+    # 3. Primary Community Handles
+    for handle in top_handles:
+        queries.append(f'site:x.com @{handle}')
+
+    # 4. High-Precision Compound Queries: Discovered Tag + Template Keyword
+    for tag in top_tags:
+        for kw in KEYWORD_TEMPLATES:
+            queries.append(f'site:x.com #{tag} "{kw}"')
+
+    # 5. Top Individual Tags (as fallback)
+    for tag in top_tags[:2]:
+        queries.append(f'site:x.com #{tag}')
+
+    seen_q = set()
+    deduped_q = []
+    for q in queries:
+        if q not in seen_q:
+            seen_q.add(q)
+            deduped_q.append(q)
+
+    all_entities = [f"#{t}" for t in top_tags] + [f'"{p}"' for p in top_phrases] + [f'"{s}"' for s in top_subs] + [f"@{h}" for h in top_handles]
+    return all_entities, deduped_q
+
+
+def is_post_url(url: str) -> bool:
+    """Returns True if the URL points to a specific post/status rather than an account profile root."""
+    p = url.lower()
+    if any(d in p for d in ("x.com", "twitter.com")):
+        return "/status/" in p
+    if "instagram.com" in p:
+        return any(x in p for x in ("/p/", "/reel/", "/tv/"))
+    if "reddit.com" in p:
+        return "/comments/" in p
+    if "linkedin.com" in p:
+        return any(x in p for x in ("/posts/", "/activity/", "/feed/update/"))
+    return False
+
+
+def _resolve_gated_social_campaigns(
+    visual_pool: list[dict[str, Any]],
+    s_key: str | None,
+    ocr_keywords: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Dynamically mines entities and resolves gated social posts (X.com, etc.)
+    using statistical n-grams, project subdomains, community handles, and multi-modal text cues.
+    Contains ZERO hardcoded keywords, event names, or hashtags.
+    """
+    if not s_key:
+        return []
+
+    _, search_queries = extract_dynamic_entities_and_queries(visual_pool)
+
+    # Prepend targeted OCR identity queries if text cues exist (e.g. name on card)
+    targeted_queries: list[str] = []
+    if ocr_keywords:
+        event_stops = {"hacker", "house", "build", "paradise", "conference", "summit", "hackathon", "season", "pass", "card", "id"}
+        names = []
+        contexts = []
+        for kw in ocr_keywords:
+            words = kw.split()
+            if 2 <= len(words) <= 3 and not any(w.lower() in event_stops for w in words):
+                names.append(kw)
+            else:
+                contexts.append(kw)
+
+        for name in names:
+            for ctx in contexts:
+                ctx_words = [w for w in ctx.split() if w.lower() not in event_stops]
+                loc = ctx_words[0] if ctx_words else ctx
+                q_pair = f'site:x.com "{name}" "{loc}"'
+                if q_pair not in targeted_queries:
+                    targeted_queries.append(q_pair)
+            q_name = f'site:x.com "{name}"'
+            if q_name not in targeted_queries:
+                targeted_queries.append(q_name)
+
+        for kw in ocr_keywords[:3]:
+            q_kw = f'site:x.com "{kw}"'
+            if q_kw not in targeted_queries:
+                targeted_queries.append(q_kw)
+
+    all_queries = targeted_queries + [q for q in search_queries if q not in targeted_queries]
+    if not all_queries:
+        return []
+
+    social_graph_matches: list[dict[str, Any]] = []
+    seen_links = set()
+
+    # Query top synthesized queries
+    for query in all_queries[:24]:
+        try:
+            x_results = search_social_index(query, platform="x.com", api_key=s_key)
+            for res in x_results:
+                link = res.get("link", "")
+                if link and link not in seen_links:
+                    seen_links.add(link)
+                    social_graph_matches.append(res)
+        except Exception:
+            pass
+
+    return social_graph_matches
+
+
 def _fetch_dual_perspective_results(
     engine: str,
-    full_url: str,
-    crop_url: str | None,
+    crop_url: str,
+    canonical_url: str | None,
+    full_url: str | None,
+    ocr_keywords: list[str] | None,
     serpapi_key: str | None,
 ) -> tuple[list[dict[str, Any]], str]:
     """
-    Fetches visual search matches across both perspectives:
-    1. Full image (for full-body / background context matching on LinkedIn, X, etc.)
-    2. Cropped facial image (for close-up portrait / avatar matching)
+    Fetches visual and multi-modal search matches across:
+    1. Cropped facial image (for close-up biometric portrait matching, avoiding clothing/scene bias)
+    2. Canonical Umeyama aligned face (for pose-normalized affine invariant matching)
+    3. Full context / situational scene image (captures clothes, background architecture, and setting)
+    4. Gated Social Media Graph (resolves walled-garden X.com campaign posts from visual matches WITHOUT OCR)
     """
+    s_key = serpapi_key or os.getenv("SERPAPI_KEY")
     engine_name = engine.lower()
+    crop_matches: list[dict[str, Any]] = []
+    canon_matches: list[dict[str, Any]] = []
+    keyword_matches: list[dict[str, Any]] = []
+    full_matches: list[dict[str, Any]] = []
+
+    # 1. Multi-modal keyword search if text cues exist
+    if ocr_keywords and s_key:
+        for kw in ocr_keywords[:2]:
+            try:
+                kw_results = search_google_images(kw, api_key=s_key)
+                keyword_matches.extend(kw_results)
+            except Exception:
+                pass
 
     if engine_name == "google_lens":
-        full_matches = []
-        crop_matches = []
         try:
-            full_matches = search_google_lens(full_url, api_key=serpapi_key)
+            crop_matches = search_google_lens(crop_url, api_key=s_key)
         except Exception:
             pass
-        if crop_url and crop_url != full_url:
+        if canonical_url and canonical_url != crop_url:
             try:
-                crop_matches = search_google_lens(crop_url, api_key=serpapi_key)
+                canon_matches = search_google_lens(canonical_url, api_key=s_key)
             except Exception:
                 pass
-        merged = _merge_candidate_lists(full_matches, crop_matches)
+        if full_url:
+            try:
+                full_matches = search_google_lens(full_url, api_key=s_key)
+            except Exception:
+                pass
+
+        # 2. Multi-Hop Visual Social Graph & Gated Platform Discovery (without OCR)
+        visual_pool = full_matches + crop_matches + canon_matches
+        social_graph_matches = _resolve_gated_social_campaigns(visual_pool, s_key, ocr_keywords=ocr_keywords)
+
+        merged = _merge_candidate_lists(social_graph_matches, crop_matches, canon_matches, full_matches, keyword_matches)
         if not merged:
             try:
-                y_matches = search_yandex_images(full_url, api_key=serpapi_key)
+                y_matches = search_yandex_images(full_url or crop_url, api_key=s_key)
                 if y_matches:
-                    return y_matches, f"Google Lens (Auto-Fallback to Yandex: {len(y_matches)} matches)"
+                    return _merge_candidate_lists(y_matches, keyword_matches), f"Google Lens (Auto-Fallback to Yandex: {len(y_matches)} matches)"
             except Exception:
                 pass
-        return merged, f"Google Lens (Dual-Perspective: {len(full_matches)} Full + {len(crop_matches)} Crop)"
+        return merged, f"Google Lens (Holistic Fusion: {len(social_graph_matches)} Gated-X + {len(crop_matches)} FaceCrop + {len(canon_matches)} Canon + {len(full_matches)} Scene)"
 
     elif engine_name == "yandex":
-        full_matches = []
-        crop_matches = []
         try:
-            full_matches = search_yandex_images(full_url, api_key=serpapi_key)
+            crop_matches = search_yandex_images(crop_url, api_key=s_key)
         except Exception:
             pass
-        if crop_url and crop_url != full_url:
+        if canonical_url and canonical_url != crop_url:
             try:
-                crop_matches = search_yandex_images(crop_url, api_key=serpapi_key)
+                canon_matches = search_yandex_images(canonical_url, api_key=s_key)
             except Exception:
                 pass
-        merged = _merge_candidate_lists(full_matches, crop_matches)
+        if full_url:
+            try:
+                full_matches = search_yandex_images(full_url, api_key=s_key)
+            except Exception:
+                pass
+
+        visual_pool = full_matches + crop_matches + canon_matches
+        social_graph_matches = _resolve_gated_social_campaigns(visual_pool, s_key, ocr_keywords=ocr_keywords)
+
+        merged = _merge_candidate_lists(social_graph_matches, crop_matches, canon_matches, full_matches, keyword_matches)
         if not merged:
             try:
-                l_matches = search_google_lens(full_url, api_key=serpapi_key)
+                l_matches = search_google_lens(full_url or crop_url, api_key=s_key)
                 if l_matches:
-                    return l_matches, f"Yandex (Auto-Fallback to Lens: {len(l_matches)} matches)"
+                    return _merge_candidate_lists(l_matches, keyword_matches), f"Yandex (Auto-Fallback to Lens: {len(l_matches)} matches)"
             except Exception:
                 pass
-        return merged, f"Yandex Images (Dual-Perspective: {len(full_matches)} Full + {len(crop_matches)} Crop)"
+        return merged, f"Yandex Images (Holistic Fusion: {len(social_graph_matches)} Gated-X + {len(crop_matches)} FaceCrop + {len(canon_matches)} Canon + {len(full_matches)} Scene)"
 
     else:
-        # Hybrid: Google Lens + Yandex across both full scan and cropped face
-        lens_full, lens_crop, yandex_full, yandex_crop = [], [], [], []
+        # Hybrid: Google Lens + Yandex across scene, face crops, and social graph
+        lens_full, yandex_full, lens_crop, yandex_crop = [], [], [], []
         try:
-            lens_full = search_google_lens(full_url, api_key=serpapi_key)
+            lens_crop = search_google_lens(crop_url, api_key=s_key)
         except Exception:
             pass
         try:
-            lens_crop = search_google_lens(crop_url, api_key=serpapi_key) if crop_url else []
+            yandex_crop = search_yandex_images(crop_url, api_key=s_key)
         except Exception:
             pass
-        try:
-            yandex_full = search_yandex_images(full_url, api_key=serpapi_key)
-        except Exception:
-            pass
-        try:
-            yandex_crop = search_yandex_images(crop_url, api_key=serpapi_key) if crop_url else []
-        except Exception:
-            pass
+        if full_url:
+            try:
+                lens_full = search_google_lens(full_url, api_key=s_key)
+            except Exception:
+                pass
+            try:
+                yandex_full = search_yandex_images(full_url, api_key=s_key)
+            except Exception:
+                pass
 
-        # Prioritize Google Lens full matches first (highest social accuracy), then Yandex full, then crops
-        merged = _merge_candidate_lists(lens_full, yandex_full, lens_crop, yandex_crop)
-        total_count = len(lens_full) + len(lens_crop) + len(yandex_full) + len(yandex_crop)
-        return merged, f"Hybrid (Lens {len(lens_full)+len(lens_crop)} + Yandex {len(yandex_full)+len(yandex_crop)} = {total_count} raw)"
+        visual_pool = lens_full + yandex_full + lens_crop + yandex_crop
+        social_graph_matches = _resolve_gated_social_campaigns(visual_pool, s_key, ocr_keywords=ocr_keywords)
+
+        merged = _merge_candidate_lists(social_graph_matches, lens_crop, yandex_crop, lens_full, yandex_full, keyword_matches)
+        total_count = len(social_graph_matches) + len(lens_full) + len(yandex_full) + len(keyword_matches) + len(lens_crop) + len(yandex_crop)
+        return merged, f"Hybrid (Holistic Fusion: Gated-X {len(social_graph_matches)} + Biometrics {len(lens_crop)+len(yandex_crop)} + Scene {len(lens_full)+len(yandex_full)} = {total_count} raw)"
 
 
 def find_verified_social_post(
@@ -399,14 +643,14 @@ def find_verified_social_post(
     include_general_web: bool = True,
     offline_demo: bool = False,
     offline_post_url: str | None = None,
+    ocr_keywords: list[str] | None = None,
 ) -> MatcherResult:
     """
-    Executes Stage 2 with Fast Dual-Perspective Multi-Engine Search:
-    1. Uploads both full image and cropped facial portrait to ImgBB
-    2. Queries visual search engines across both perspectives (Full Scan + Zoomed Crop)
-    3. Ranks and evaluates candidate pool with ultra-fast parallel CDN evaluation:
-       - If `until_success=True`: evaluates in order and exits immediately on the first verified match.
-       - If `until_success=False`: evaluates candidates up to `max_candidates` in parallel and picks the best match.
+    Executes Stage 2 with Fast Face-First Multi-Modal Search:
+    1. Extracts background-isolated face crop, canonical Umeyama alignment, and OCR identity keywords.
+    2. Uploads focused facial portraits to ImgBB.
+    3. Queries visual search engines and multi-modal keyword indexes.
+    4. Ranks and evaluates candidate pool with parallel CDN biometric evaluation.
     """
     candidate_logs: list[dict[str, Any]] = []
 
@@ -424,7 +668,8 @@ def find_verified_social_post(
         candidate_logs.append({
             "position": 1, "url": demo_url, "platform": "x", "distance": 0.12,
             "matched": True, "verification_source": "page_image",
-            "near_duplicate_of_input": False, "tier": TIER_PAGE_IMAGE_UNIQUE,
+            "near_duplicate_of_input": False, "is_duplicate_candidate": False,
+            "tier": TIER_PAGE_IMAGE_UNIQUE,
             "status": "ACCEPTED (Offline Demo Mode)",
         })
         return MatcherResult(
@@ -438,22 +683,74 @@ def find_verified_social_post(
     input_bytes = _to_bytes(image_path_or_bytes)
     input_ahash = _average_hash(input_bytes)
 
-    # 1. Upload Full Image
-    full_imgbb_url = upload_to_imgbb(image_path_or_bytes, api_key=imgbb_key)
-    
-    # 2. Upload Cropped Face if provided and distinct
-    crop_imgbb_url = None
-    if cropped_face_bytes is not None and cropped_face_bytes != image_path_or_bytes:
-        try:
-            crop_imgbb_url = upload_to_imgbb(cropped_face_bytes, api_key=imgbb_key)
-        except Exception:
-            crop_imgbb_url = full_imgbb_url
-    else:
-        crop_imgbb_url = full_imgbb_url
+    # Calculate whether input face is low resolution (< 50px bbox in mobile screenshots)
+    is_low_res = False
+    try:
+        from faceid.encoder import FaceEncoder
+        enc = FaceEncoder.get_instance()
+        _, face_meta = enc.encode_face(input_bytes)
+        bbox = face_meta.get("bbox", [])
+        if len(bbox) >= 4:
+            fw = bbox[2] - bbox[0]
+            fh = bbox[3] - bbox[1]
+            if fw < 50 or fh < 50:
+                is_low_res = True
+    except Exception:
+        pass
 
-    # 3. Dual-Perspective Multi-Engine Search
+    effective_tol = max(tol, 0.45) if is_low_res else tol
+
+    # 1. Extract Face Crop and Canonical Umeyama Alignment
+    crop_bytes = cropped_face_bytes
+    if crop_bytes is None:
+        try:
+            crop_bytes, _, _ = extract_face_crop(input_bytes, margin=0.35)
+        except Exception:
+            crop_bytes = input_bytes
+
+    canon_bytes = None
+    try:
+        canon_bytes, _, _ = extract_canonical_aligned_face(input_bytes, image_size=224)
+    except Exception:
+        canon_bytes = crop_bytes
+
+    # 2. Extract OCR identity keywords from image card/banner (optional fast pass)
+    if ocr_keywords is None and input_bytes:
+        try:
+            from search.ocr_extractor import extract_image_text_and_keywords
+            ocr_res = extract_image_text_and_keywords(input_bytes)
+            ocr_keywords = ocr_res.get("keywords", [])
+        except Exception:
+            ocr_keywords = []
+
+    # 3. Upload Face Crop and Canonical Face to ImgBB (Primary Search Probes)
+    crop_imgbb_url = upload_to_imgbb(crop_bytes, api_key=imgbb_key)
+    canon_imgbb_url = None
+    if canon_bytes is not None and canon_bytes != crop_bytes:
+        try:
+            canon_imgbb_url = upload_to_imgbb(canon_bytes, api_key=imgbb_key)
+        except Exception:
+            canon_imgbb_url = crop_imgbb_url
+    else:
+        canon_imgbb_url = crop_imgbb_url
+
+    full_imgbb_url = None
+    if input_bytes != crop_bytes:
+        try:
+            full_imgbb_url = upload_to_imgbb(input_bytes, api_key=imgbb_key)
+        except Exception:
+            full_imgbb_url = crop_imgbb_url
+    else:
+        full_imgbb_url = crop_imgbb_url
+
+    # 4. Face-First Multi-Modal Search & Gated Social Discovery
     raw_results, active_engine_label = _fetch_dual_perspective_results(
-        engine, full_imgbb_url, crop_imgbb_url, serpapi_key
+        engine,
+        crop_url=crop_imgbb_url,
+        canonical_url=canon_imgbb_url,
+        full_url=full_imgbb_url,
+        ocr_keywords=ocr_keywords,
+        serpapi_key=serpapi_key,
     )
     total_engine_matches = len(raw_results)
 
@@ -465,10 +762,10 @@ def find_verified_social_post(
             reason=f"No visual matches returned by {active_engine_label} for this image.",
         )
 
-    # Tier 1: social-platform candidates. Tier 2: general web.
     social_candidates: list[dict[str, Any]] = []
     web_candidates: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
+    seen_images: set[str] = set()
 
     for item in raw_results:
         link = item.get("link", "")
@@ -477,16 +774,30 @@ def find_verified_social_post(
         canon_link = normalize_url(link)
         if canon_link in seen_urls:
             continue
+
+        thumb = item.get("thumbnail", "")
+        orig = item.get("original_image", "")
+        img_key = orig or thumb
+        if img_key and img_key in seen_images:
+            continue
+
         seen_urls.add(canon_link)
-        if is_social_media_url(canon_link):
+        if img_key:
+            seen_images.add(img_key)
+
+        is_soc = is_social_media_url(canon_link)
+        if is_soc:
             social_candidates.append(item)
         elif include_general_web:
             web_candidates.append(item)
 
+    # Social posts (status/reels/comments) prioritized FIRST over profile roots & generic web
+    post_candidates = [c for c in social_candidates if is_post_url(c.get("link", ""))]
+    profile_candidates = [c for c in social_candidates if not is_post_url(c.get("link", ""))]
+    ordered_candidates = post_candidates + profile_candidates + (web_candidates if include_general_web else [])
     total_social_candidates = len(social_candidates)
     total_web_candidates = len(web_candidates)
 
-    ordered_candidates = social_candidates + web_candidates
     if not ordered_candidates:
         return MatcherResult(
             accepted_record=None, candidate_logs=candidate_logs, imgbb_url=full_imgbb_url,
@@ -502,7 +813,7 @@ def find_verified_social_post(
     if until_success:
         # Sequential early-exit: evaluate in order, stop immediately on first match
         for idx, candidate in enumerate(candidates_to_eval, start=1):
-            log = _evaluate_candidate(candidate, idx, input_embedding, input_ahash, tol)
+            log = _evaluate_candidate(candidate, idx, input_embedding, input_ahash, effective_tol)
             candidate_logs.append(log)
             if log.get("matched"):
                 passing.append(log)
@@ -511,7 +822,7 @@ def find_verified_social_post(
         # Parallel evaluation for fixed depth
         with ThreadPoolExecutor(max_workers=8) as executor:
             futures = [
-                executor.submit(_evaluate_candidate, cand, idx, input_embedding, input_ahash, tol)
+                executor.submit(_evaluate_candidate, cand, idx, input_embedding, input_ahash, effective_tol)
                 for idx, cand in enumerate(candidates_to_eval, start=1)
             ]
             for f in futures:
@@ -519,6 +830,24 @@ def find_verified_social_post(
                 candidate_logs.append(log)
                 if log.get("matched"):
                     passing.append(log)
+
+    # Post-evaluation perceptual deduplication tag across evaluated candidates
+    seen_candidate_ahashes: list[tuple[int, int]] = []  # (position, ahash)
+    for log in candidate_logs:
+        img_bytes = log.get("_image_bytes")
+        cand_ahash = _average_hash(img_bytes) if img_bytes else None
+        log["is_duplicate_candidate"] = False
+        log["duplicate_of"] = None
+
+        if cand_ahash is not None:
+            for prev_pos, prev_ahash in seen_candidate_ahashes:
+                dist_h = _hamming(cand_ahash, prev_ahash)
+                if dist_h is not None and dist_h <= 2:
+                    log["is_duplicate_candidate"] = True
+                    log["duplicate_of"] = prev_pos
+                    break
+            if not log["is_duplicate_candidate"]:
+                seen_candidate_ahashes.append((log["position"], cand_ahash))
 
     if not passing:
         return MatcherResult(

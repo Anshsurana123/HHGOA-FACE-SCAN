@@ -309,7 +309,7 @@
               </label>
               <span class="text-[10px] font-mono text-textMuted px-1.5 py-0.5 rounded bg-surfaceElevated border border-border">DISCOVERY</span>
             </div>
-            <div class="grid grid-cols-3 gap-1 p-1 rounded bg-bg border border-border">
+            <div class="grid grid-cols-4 gap-1 p-1 rounded bg-bg border border-border">
               <button id="btnEngineLens" type="button" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen cursor-pointer" title="Google Lens Dual-Perspective visual search">
                 Lens
               </button>
@@ -319,9 +319,13 @@
               <button id="btnEngineHybrid" type="button" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary cursor-pointer" title="Combines Google Lens + Yandex">
                 Hybrid
               </button>
+              <button id="btnEngineAgent" type="button" class="py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary cursor-pointer" title="Autonomous Multi-Hop OSINT Research Agent">
+                Agentic OSINT
+              </button>
             </div>
             <p class="text-[11px] text-textMuted font-mono leading-tight" id="engineDesc">Google Lens: Dual-Perspective (Full Context + Cropped Face) #1 for LinkedIn & X profiles.</p>
           </div>
+
 
           <!-- CARD 3: SEARCH DEPTH -->
           <div class="p-4 rounded-lg bg-surface border border-border flex flex-col justify-between gap-3 shadow-sm">
@@ -330,19 +334,19 @@
                 <svg class="w-3.5 h-3.5 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                 3. Search Depth
               </label>
-              <span id="depthVal" class="text-xs font-mono font-bold text-signalGreen">35 Candidates</span>
+              <span id="depthVal" class="text-xs font-mono font-bold text-signalGreen">⚡ Till Success (Full Pool)</span>
             </div>
             <div class="flex flex-col gap-1">
-              <input type="range" id="depthSlider" min="10" max="350" step="10" value="35" class="w-full accent-signalGreen cursor-pointer" />
+              <input type="range" id="depthSlider" min="10" max="350" step="10" value="100" class="w-full accent-signalGreen cursor-pointer" />
               <div class="flex justify-between text-[10px] font-mono text-textMuted">
                 <span>10 (Fast)</span>
                 <span>150 (Deep)</span>
                 <span>350 (Max)</span>
               </div>
             </div>
-            <button id="btnTillSuccess" type="button" class="w-full py-1.5 px-2 rounded border border-border bg-surfaceElevated hover:border-signalGreen text-xs font-mono text-textMuted hover:text-signalGreen transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+            <button id="btnTillSuccess" type="button" class="w-full py-1.5 px-2 rounded border border-signalGreen bg-signalGreen/15 text-xs font-mono font-bold text-signalGreen transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(74,222,128,0.2)]">
               <span>⚡</span>
-              <span id="txtTillSuccess">TILL SUCCESS (Search Until Found)</span>
+              <span id="txtTillSuccess">⚡ TILL SUCCESS (ACTIVE — Search Until Found)</span>
             </button>
           </div>
 
@@ -452,17 +456,43 @@
 
             <div class="p-5 flex flex-col gap-5">
               
-              <!-- Side-by-Side Images -->
+              <!-- Perspective & HUD View Selector -->
+              <div class="flex items-center justify-between gap-2 p-1.5 rounded bg-surfaceElevated border border-border">
+                <span class="text-[10px] font-mono text-textMuted uppercase font-bold flex items-center gap-1">
+                  <svg class="w-3 h-3 text-signalGreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  VIEW MODE:
+                </span>
+                <div class="flex items-center gap-1 font-mono text-[10px]">
+                  <button id="btnViewHudMesh" type="button" class="py-1 px-2 rounded bg-signalGreen text-bg font-bold cursor-pointer transition-colors" title="Overlay 68-point 3D fiducial landmark mesh">
+                    68-PT MESH HUD
+                  </button>
+                  <button id="btnViewCanon" type="button" class="py-1 px-2 rounded bg-bg text-textMuted hover:text-textPrimary border border-border cursor-pointer transition-colors" title="Canonical Umeyama affine normalized portrait">
+                    CANONICAL (112px)
+                  </button>
+                  <button id="btnViewCrop" type="button" class="py-1 px-2 rounded bg-bg text-textMuted hover:text-textPrimary border border-border cursor-pointer transition-colors" title="Background-isolated face crop">
+                    FOCUSED CROP
+                  </button>
+                  <button id="btnViewFull" type="button" class="py-1 px-2 rounded bg-bg text-textMuted hover:text-textPrimary border border-border cursor-pointer transition-colors" title="Original input image">
+                    FULL SCAN
+                  </button>
+                </div>
+              </div>
+
+              <!-- Side-by-Side Images with Biometric Canvas Overlay -->
               <div class="grid grid-cols-2 gap-4">
                 
-                <!-- Input Face -->
+                <!-- Input Face with Interactive Landmark Mesh Canvas -->
                 <div class="flex flex-col gap-1.5">
                   <div class="flex justify-between items-center text-[11px] font-mono text-textMuted">
-                    <span>SOURCE INPUT</span>
+                    <span class="flex items-center gap-1.5">
+                      <span class="w-1.5 h-1.5 rounded-full bg-signalGreen animate-pulse"></span>
+                      <span>SOURCE PROBE</span>
+                    </span>
                     <span id="inputFaceMeta" class="text-signalGreen">--</span>
                   </div>
-                  <div class="aspect-square rounded border border-border bg-bg relative overflow-hidden flex items-center justify-center">
-                    <img id="imgSourceDisplay" src="" alt="Input Scan" class="hidden w-full h-full object-cover" />
+                  <div class="aspect-square rounded border border-border bg-bg relative overflow-hidden flex items-center justify-center group">
+                    <img id="imgSourceDisplay" src="" alt="Input Scan" class="hidden w-full h-full object-contain bg-black/40 select-none" />
+                    <canvas id="canvasBiometricHUD" class="absolute inset-0 w-full h-full pointer-events-none z-10"></canvas>
                     <div id="imgSourcePlaceholder" class="text-xs font-mono text-textMuted flex flex-col items-center gap-1">
                       <svg class="w-6 h-6 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                       <span>NO SCAN</span>
@@ -477,7 +507,7 @@
                     <span id="matchPlatformTag" class="text-textPrimary uppercase">--</span>
                   </div>
                   <div class="aspect-square rounded border border-border bg-bg relative overflow-hidden flex items-center justify-center">
-                    <img id="imgMatchDisplay" src="" alt="Matched Post" class="hidden w-full h-full object-cover" />
+                    <img id="imgMatchDisplay" src="" alt="Matched Post" class="hidden w-full h-full object-contain bg-black/40" />
                     <div id="imgMatchPlaceholder" class="text-xs font-mono text-textMuted flex flex-col items-center gap-1">
                       <svg class="w-6 h-6 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                       <span>AWAITING SEARCH</span>
@@ -485,6 +515,51 @@
                   </div>
                 </div>
 
+              </div>
+
+              <!-- FORENSIC BIOMETRIC & OCR TELEMETRY HUD -->
+              <div id="hudTelemetryCard" class="p-3.5 rounded bg-surfaceElevated border border-border flex flex-col gap-2.5 font-mono text-xs">
+                <div class="flex justify-between items-center border-b border-border/60 pb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-signalGreen"></span>
+                    <span class="text-[11px] font-bold uppercase text-textPrimary">BIOMETRIC TELEMETRY & MULTI-MODAL CUES</span>
+                  </div>
+                  <span id="txtLandmarkCount" class="text-[10px] px-1.5 py-0.5 rounded bg-bg border border-signalGreen/40 text-signalGreen font-bold">68-3D + 106-2D PTS</span>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+                  <!-- 3D Head Pose -->
+                  <div class="p-2 rounded bg-bg border border-border flex flex-col gap-0.5">
+                    <span class="text-[9px] text-textMuted uppercase font-bold">3D HEAD POSE (P/Y/R)</span>
+                    <span id="hudPoseVal" class="text-textPrimary font-bold font-mono">-- / -- / --</span>
+                  </div>
+                  <!-- Demographic Estimate -->
+                  <div class="p-2 rounded bg-bg border border-border flex flex-col gap-0.5">
+                    <span class="text-[9px] text-textMuted uppercase font-bold">AGE & GENDER</span>
+                    <span id="hudDemographics" class="text-textPrimary font-mono">-- / --</span>
+                  </div>
+                  <!-- Detection Quality Score -->
+                  <div class="p-2 rounded bg-bg border border-border flex flex-col gap-0.5">
+                    <span class="text-[9px] text-textMuted uppercase font-bold">DETECTION SCORE</span>
+                    <span id="hudDetScore" class="text-signalGreen font-bold font-mono">--</span>
+                  </div>
+                  <!-- ArcFace Embedding L2 Norm -->
+                  <div class="p-2 rounded bg-bg border border-border flex flex-col gap-0.5">
+                    <span class="text-[9px] text-textMuted uppercase font-bold">EMBEDDING TOPOLOGY</span>
+                    <span class="text-textPrimary font-mono">512-D ArcFace</span>
+                  </div>
+                </div>
+
+                <!-- Multi-Modal OCR Identity Cues -->
+                <div id="hudOcrContainer" class="p-2 rounded bg-bg border border-border flex flex-col gap-1">
+                  <div class="flex justify-between items-center text-[10px]">
+                    <span class="text-textMuted uppercase font-bold">MULTI-MODAL OCR IDENTITY CUES:</span>
+                    <span id="hudOcrStatus" class="text-signalGreen text-[9px] font-bold">ACTIVE</span>
+                  </div>
+                  <div id="hudOcrKeywords" class="flex flex-wrap gap-1.5 text-[11px] text-textPrimary">
+                    <span class="text-textMuted italic text-[10px]">No text cues detected yet.</span>
+                  </div>
+                </div>
               </div>
 
               <!-- Accuracy Score & Gauge -->
@@ -620,6 +695,20 @@
             </div>
           </div>
 
+        <!-- MULTI-HOP OSINT EVIDENCE TRAIL (AGENTIC MODE) -->
+        <div id="cardEvidenceTrail" class="rounded-md border border-border bg-surface flex flex-col overflow-hidden hidden mb-6">
+          <div class="px-4 py-3 border-b border-border bg-surfaceElevated flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-signalGreen"></span>
+              <h2 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">MULTI-HOP OSINT EVIDENCE TRAIL & PROVENANCE GRAPH</h2>
+            </div>
+            <span id="evidenceNodeCount" class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-signalGreen">0 EVIDENCE STEPS</span>
+          </div>
+          <div class="p-4 bg-bg">
+            <div id="evidenceChainList" class="flex flex-col gap-2 font-mono text-xs">
+              <!-- Dynamically populated evidence nodes -->
+            </div>
+          </div>
         </div>
 
         <!-- CANDIDATE MATCHES TABLE -->
@@ -627,6 +716,7 @@
           <div class="px-4 py-3 border-b border-border bg-surfaceElevated flex justify-between items-center">
             <div class="flex items-center gap-3">
               <h2 class="text-xs font-bold font-mono uppercase tracking-wider text-textPrimary">EVALUATED CANDIDATE MATCHES</h2>
+
               <span class="text-[11px] font-mono text-textMuted hidden sm:inline">&bull; Click any candidate to view its photo and score in the comparator</span>
             </div>
             <span id="candidateCountBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-bg border border-border text-textMuted">0 CANDIDATES</span>
@@ -1071,7 +1161,7 @@
     let selectedSampleId = null;
     let activeNetwork = "local";
     let activeEngine = "google_lens";
-    let isTillSuccess = false;
+    let isTillSuccess = true;
     let isRunning = false;
     let lastRecordPayload = null;
 
@@ -1115,9 +1205,15 @@
     const btnEngineYandex = document.getElementById("btnEngineYandex");
     const btnEngineLens = document.getElementById("btnEngineLens");
     const btnEngineHybrid = document.getElementById("btnEngineHybrid");
+    const btnEngineAgent = document.getElementById("btnEngineAgent");
     const engineDesc = document.getElementById("engineDesc");
 
+    const cardEvidenceTrail = document.getElementById("cardEvidenceTrail");
+    const evidenceChainList = document.getElementById("evidenceChainList");
+    const evidenceNodeCount = document.getElementById("evidenceNodeCount");
+
     const depthSlider = document.getElementById("depthSlider");
+
     const depthVal = document.getElementById("depthVal");
     const btnTillSuccess = document.getElementById("btnTillSuccess");
     const txtTillSuccess = document.getElementById("txtTillSuccess");
@@ -1186,6 +1282,225 @@
     const logCount = document.getElementById("logCount");
     const btnToggleLog = document.getElementById("btnToggleLog");
     const logChevron = document.getElementById("logChevron");
+
+    // BIOMETRIC LANDMARK HUD & PERSPECTIVE VIEWER ELEMENTS
+    const canvasBiometricHUD = document.getElementById("canvasBiometricHUD");
+    const btnViewHudMesh = document.getElementById("btnViewHudMesh");
+    const btnViewCanon = document.getElementById("btnViewCanon");
+    const btnViewCrop = document.getElementById("btnViewCrop");
+    const btnViewFull = document.getElementById("btnViewFull");
+
+    const hudPoseVal = document.getElementById("hudPoseVal");
+    const hudDemographics = document.getElementById("hudDemographics");
+    const hudDetScore = document.getElementById("hudDetScore");
+    const hudOcrKeywords = document.getElementById("hudOcrKeywords");
+    const txtLandmarkCount = document.getElementById("txtLandmarkCount");
+
+    let currentFaceData = null;
+    let currentPerspective = "hud"; // "hud", "canon", "crop", "full"
+    let probeUrls = { full: "", crop: "", canon: "" };
+
+    function setPerspectiveView(mode) {
+      currentPerspective = mode;
+      const buttons = [
+        { btn: btnViewHudMesh, name: "hud" },
+        { btn: btnViewCanon, name: "canon" },
+        { btn: btnViewCrop, name: "crop" },
+        { btn: btnViewFull, name: "full" },
+      ];
+      buttons.forEach(({ btn, name }) => {
+        if (!btn) return;
+        if (name === mode) {
+          btn.className = "py-1 px-2 rounded bg-signalGreen text-bg font-bold cursor-pointer transition-colors";
+        } else {
+          btn.className = "py-1 px-2 rounded bg-bg text-textMuted hover:text-textPrimary border border-border cursor-pointer transition-colors";
+        }
+      });
+
+      if (mode === "hud") {
+        if (probeUrls.full) {
+          imgSourceDisplay.src = probeUrls.full;
+        } else if (probeUrls.crop) {
+          imgSourceDisplay.src = probeUrls.crop;
+        }
+        if (canvasBiometricHUD) canvasBiometricHUD.classList.remove("hidden");
+        if (currentFaceData) {
+          setTimeout(() => drawLandmarkMesh(currentFaceData), 60);
+        }
+      } else if (mode === "canon") {
+        if (probeUrls.canon) imgSourceDisplay.src = probeUrls.canon;
+        clearLandmarkMesh();
+      } else if (mode === "crop") {
+        if (probeUrls.crop) imgSourceDisplay.src = probeUrls.crop;
+        clearLandmarkMesh();
+      } else if (mode === "full") {
+        if (probeUrls.full) imgSourceDisplay.src = probeUrls.full;
+        clearLandmarkMesh();
+      }
+    }
+
+    if (btnViewHudMesh) btnViewHudMesh.addEventListener("click", () => setPerspectiveView("hud"));
+    if (btnViewCanon) btnViewCanon.addEventListener("click", () => setPerspectiveView("canon"));
+    if (btnViewCrop) btnViewCrop.addEventListener("click", () => setPerspectiveView("crop"));
+    if (btnViewFull) btnViewFull.addEventListener("click", () => setPerspectiveView("full"));
+
+    function clearLandmarkMesh() {
+      if (!canvasBiometricHUD) return;
+      const ctx = canvasBiometricHUD.getContext("2d");
+      ctx.clearRect(0, 0, canvasBiometricHUD.width, canvasBiometricHUD.height);
+    }
+
+    function drawLandmarkMesh(faceMeta) {
+      if (!canvasBiometricHUD || !imgSourceDisplay || !faceMeta) return;
+      const ctx = canvasBiometricHUD.getContext("2d");
+      const parentEl = canvasBiometricHUD.parentElement;
+      if (!parentEl) return;
+      
+      const width = parentEl.clientWidth || 300;
+      const height = parentEl.clientHeight || 300;
+      canvasBiometricHUD.width = width * window.devicePixelRatio;
+      canvasBiometricHUD.height = height * window.devicePixelRatio;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.clearRect(0, 0, width, height);
+
+      const naturalW = imgSourceDisplay.naturalWidth || width;
+      const naturalH = imgSourceDisplay.naturalHeight || height;
+
+      // Calculate aspect ratio containment
+      const scale = Math.min(width / naturalW, height / naturalH);
+      const renderW = naturalW * scale;
+      const renderH = naturalH * scale;
+      const offsetX = (width - renderW) / 2;
+      const offsetY = (height - renderH) / 2;
+
+      function toScreen(x, y) {
+        return [offsetX + x * scale, offsetY + y * scale];
+      }
+
+      // 1. Draw Bounding Box Reticle
+      if (faceMeta.bbox && faceMeta.bbox.length === 4) {
+        const [x1, y1, x2, y2] = faceMeta.bbox;
+        const [sx1, sy1] = toScreen(x1, y1);
+        const [sx2, sy2] = toScreen(x2, y2);
+        const bw = sx2 - sx1;
+        const bh = sy2 - sy1;
+        const cornerLen = Math.min(16, bw * 0.25, bh * 0.25);
+
+        ctx.strokeStyle = "rgba(0, 255, 136, 0.85)";
+        ctx.lineWidth = 1.5;
+
+        // Draw 4 corner brackets
+        ctx.beginPath();
+        // Top-Left
+        ctx.moveTo(sx1, sy1 + cornerLen); ctx.lineTo(sx1, sy1); ctx.lineTo(sx1 + cornerLen, sy1);
+        // Top-Right
+        ctx.moveTo(sx2 - cornerLen, sy1); ctx.lineTo(sx2, sy1); ctx.lineTo(sx2, sy1 + cornerLen);
+        // Bottom-Right
+        ctx.moveTo(sx2, sy2 - cornerLen); ctx.lineTo(sx2, sy2); ctx.lineTo(sx2 - cornerLen, sy2);
+        // Bottom-Left
+        ctx.moveTo(sx1 + cornerLen, sy2); ctx.lineTo(sx1, sy2); ctx.lineTo(sx1, sy2 - cornerLen);
+        ctx.stroke();
+
+        // Target Tag
+        ctx.fillStyle = "rgba(0, 255, 136, 0.9)";
+        ctx.font = "bold 9px monospace";
+        const scoreStr = faceMeta.det_score ? `${(faceMeta.det_score * 100).toFixed(0)}% BIOMETRIC LOCK` : "TARGET LOCKED";
+        ctx.fillText(scoreStr, sx1 + 2, sy1 - 4);
+      }
+
+      // 2. Draw 68 3D Fiducial Landmark Mesh Interconnects
+      const lmk68 = faceMeta.landmark_3d_68 || [];
+      if (lmk68.length >= 68) {
+        ctx.lineWidth = 1.0;
+        ctx.strokeStyle = "rgba(0, 240, 255, 0.45)"; // Cyan wireframe
+
+        function drawLineGroup(indices, closed = false) {
+          ctx.beginPath();
+          const [fx, fy] = toScreen(lmk68[indices[0]][0], lmk68[indices[0]][1]);
+          ctx.moveTo(fx, fy);
+          for (let i = 1; i < indices.length; i++) {
+            const idx = indices[i];
+            const [px, py] = toScreen(lmk68[idx][0], lmk68[idx][1]);
+            ctx.lineTo(px, py);
+          }
+          if (closed) ctx.closePath();
+          ctx.stroke();
+        }
+
+        // Jawline (0-16)
+        drawLineGroup(Array.from({ length: 17 }, (_, i) => i));
+        // Eyebrows (17-21, 22-26)
+        ctx.strokeStyle = "rgba(0, 255, 136, 0.55)";
+        drawLineGroup([17, 18, 19, 20, 21]);
+        drawLineGroup([22, 23, 24, 25, 26]);
+        // Nose bridge & nostrils (27-30, 31-35)
+        ctx.strokeStyle = "rgba(0, 240, 255, 0.55)";
+        drawLineGroup([27, 28, 29, 30]);
+        drawLineGroup([31, 32, 33, 34, 35]);
+        // Left eye (36-41), Right eye (42-47)
+        ctx.strokeStyle = "rgba(0, 255, 136, 0.75)";
+        drawLineGroup([36, 37, 38, 39, 40, 41], true);
+        drawLineGroup([42, 43, 44, 45, 46, 47], true);
+        // Outer Lips (48-59), Inner Lips (60-67)
+        ctx.strokeStyle = "rgba(255, 0, 128, 0.65)";
+        drawLineGroup([48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59], true);
+        drawLineGroup([60, 61, 62, 63, 64, 65, 66, 67], true);
+
+        // Draw glowing nodes for all 68 points
+        lmk68.forEach((pt, idx) => {
+          const [px, py] = toScreen(pt[0], pt[1]);
+          ctx.beginPath();
+          ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = idx >= 48 ? "rgba(255, 80, 150, 0.95)" : "rgba(0, 255, 136, 0.95)";
+          ctx.fill();
+        });
+      }
+
+      // 3. Draw 3D Head Pose Orientation Compass (Top-Right)
+      if (faceMeta.pose && faceMeta.pose.length === 3) {
+        const [pitch, yaw, roll] = faceMeta.pose;
+        const compassX = width - 36;
+        const compassY = 36;
+        const compassR = 18;
+
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(compassX, compassY, compassR, 0, Math.PI * 2);
+        ctx.stroke();
+
+        const radYaw = (yaw * Math.PI) / 180;
+        const radPitch = (pitch * Math.PI) / 180;
+        const vecX = compassX + Math.sin(radYaw) * (compassR - 4);
+        const vecY = compassY - Math.sin(radPitch) * (compassR - 4);
+
+        ctx.strokeStyle = "rgba(0, 255, 136, 0.95)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(compassX, compassY);
+        ctx.lineTo(vecX, vecY);
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(0, 255, 136, 0.9)";
+        ctx.font = "bold 8px monospace";
+        ctx.fillText("3D POSE", compassX - 16, compassY + compassR + 10);
+      }
+    }
+
+    if (imgSourceDisplay) {
+      imgSourceDisplay.addEventListener("load", () => {
+        if (currentPerspective === "hud" && currentFaceData) {
+          drawLandmarkMesh(currentFaceData);
+        }
+      });
+    }
+
+    window.addEventListener("resize", () => {
+      if (currentPerspective === "hud" && currentFaceData) {
+        drawLandmarkMesh(currentFaceData);
+      }
+    });
 
     // Logger
     function appendLog(msg, colorClass = "text-textSecondary") {
@@ -1281,9 +1596,10 @@
     // Search Engine Switcher
     function setEngine(engine) {
       activeEngine = engine;
-      btnEngineYandex.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary";
-      btnEngineLens.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary";
-      btnEngineHybrid.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary";
+      btnEngineYandex.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary cursor-pointer";
+      btnEngineLens.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary cursor-pointer";
+      btnEngineHybrid.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary cursor-pointer";
+      btnEngineAgent.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors text-textMuted hover:text-textPrimary cursor-pointer";
 
       if (engine === "yandex") {
         btnEngineYandex.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen";
@@ -1297,12 +1613,18 @@
         btnEngineHybrid.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen";
         engineDesc.textContent = "Hybrid: Queries Lens + Yandex across Dual Perspectives for maximum social discovery.";
         appendLog("[CONFIG] Search Engine set to HYBRID (Lens + Yandex Dual-Perspective)");
+      } else if (engine === "agent") {
+        btnEngineAgent.className = "py-1.5 px-1 rounded text-[11px] font-mono font-medium transition-colors bg-surfaceElevated border border-signalGreen text-signalGreen";
+        engineDesc.textContent = "Agentic OSINT: Multi-hop autonomous research agent (OCR + Web + Social Graphs + Local Corpus + InsightFace + Provenance Graph). Solves DIFFERENT-photo matches!";
+        appendLog("[CONFIG] Search Engine set to AGENTIC OSINT (Autonomous Multi-Hop Research Agent)");
       }
     }
 
     btnEngineYandex.addEventListener("click", () => setEngine("yandex"));
     btnEngineLens.addEventListener("click", () => setEngine("google_lens"));
     btnEngineHybrid.addEventListener("click", () => setEngine("hybrid"));
+    btnEngineAgent.addEventListener("click", () => setEngine("agent"));
+
 
     // Network Toggle
     btnNetLocal.addEventListener("click", () => {
@@ -1357,60 +1679,18 @@
       }
     });
 
-    function handleFileSelect(file) {
-      if (!file) return;
-      originalImageFile = file;
-      selectedImageFile = file;
-      isManuallyCropped = false;
-      selectedSampleId = null;
-
-      const uploadFileName = document.getElementById("uploadFileName");
-      const uploadFileSize = document.getElementById("uploadFileSize");
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        originalImageDataUrl = e.target.result;
-        imgPreview.src = e.target.result;
-        if (uploadFileName) uploadFileName.textContent = file.name;
-        if (uploadFileSize) uploadFileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
-        dropzoneEmpty.classList.add("hidden");
-        dropzonePreview.classList.remove("hidden");
-        if (btnClearImage) btnClearImage.classList.remove("hidden");
-        if (btnRevertCrop) btnRevertCrop.classList.add("hidden");
-        imgSourceDisplay.src = e.target.result;
-        imgSourceDisplay.classList.remove("hidden");
-        imgSourcePlaceholder.classList.add("hidden");
-        appendLog(`[INPUT] Loaded user scan: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function resetAllUI() {
-      selectedImageFile = null;
-      originalImageFile = null;
-      originalImageDataUrl = null;
-      isManuallyCropped = false;
-      selectedSampleId = null;
-      fileInput.value = "";
+    function resetScanResults() {
+      // 1. Clear previous face & candidate state
+      currentFaceData = null;
       lastRecordPayload = null;
+      probeUrls = { full: "", crop: "", canon: "" };
+      clearLandmarkMesh();
 
-      if (cropperInstance) {
-        cropperInstance.destroy();
-        cropperInstance = null;
-      }
-      modalCropImage.classList.add("hidden");
-
-      // 1. Input Dropzone
-      dropzoneEmpty.classList.remove("hidden");
-      dropzonePreview.classList.add("hidden");
-      if (btnClearImage) btnClearImage.classList.add("hidden");
-      if (btnRevertCrop) btnRevertCrop.classList.add("hidden");
-
-      // 2. Left Source Image Box
-      imgSourceDisplay.src = "";
-      imgSourceDisplay.classList.add("hidden");
-      imgSourcePlaceholder.classList.remove("hidden");
-      inputFaceMeta.textContent = "--";
+      // 2. Reset Telemetry HUD
+      if (hudPoseVal) hudPoseVal.textContent = "-- / -- / --";
+      if (hudDemographics) hudDemographics.textContent = "-- / --";
+      if (hudDetScore) hudDetScore.textContent = "--";
+      if (hudOcrKeywords) hudOcrKeywords.innerHTML = `<span class="text-textMuted italic text-[10px]">No text cues detected yet.</span>`;
 
       // 3. Right Matched Post Image Box
       imgMatchDisplay.src = "";
@@ -1442,7 +1722,7 @@
       txtBlockIndex.textContent = "--";
       txtTimestamp.textContent = "--";
 
-      // 7. Buttons
+      // 7. Action Buttons
       btnVerify.disabled = true;
       btnTamper.disabled = true;
       btnExplorer.classList.add("hidden");
@@ -1453,15 +1733,153 @@
       btnBannerViewErrorVerifyProof.classList.add("hidden");
 
       // 8. Candidates Table & Modal
-      candidateCountBadge.textContent = "0 CANDIDATES";
-      tblCandidatesBody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-textMuted font-mono">Run a scan to evaluate visual candidates.</td></tr>`;
-      modalCandidatesList.innerHTML = `<div class="p-8 text-center text-textMuted font-mono">No scan executed yet. Run a search to populate candidate matches.</div>`;
+      if (cardEvidenceTrail) cardEvidenceTrail.classList.add("hidden");
+      if (evidenceChainList) evidenceChainList.innerHTML = "";
+      renderCandidates([]);
+
 
       // 9. Pipeline Stepper & Banners
       resetPipelineTracker();
       hideBanners();
-      bannerGuide.classList.remove("hidden");
+    }
 
+    async function triggerInstantFaceDetection(fileOrBlob, isManualCrop = false) {
+      setStepState(1, "active", "DETECTING FACE...");
+      inputFaceMeta.textContent = "Scanning...";
+      if (hudPoseVal) hudPoseVal.textContent = "Analyzing...";
+      if (hudDemographics) hudDemographics.textContent = "Analyzing...";
+      if (hudDetScore) hudDetScore.textContent = "Detecting...";
+
+      const formData = new FormData();
+      if (fileOrBlob instanceof File || fileOrBlob instanceof Blob) {
+        formData.append("image", fileOrBlob, fileOrBlob.name || "scan.jpg");
+      }
+      formData.append("manual_crop", isManualCrop ? "true" : "false");
+
+      try {
+        const resp = await fetch("/api/detect", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success && data.face) {
+          currentFaceData = data.face;
+          probeUrls = {
+            full: data.input_image_url ? `${data.input_image_url}?t=${Date.now()}` : "",
+            crop: data.cropped_face_url ? `${data.cropped_face_url}?t=${Date.now()}` : "",
+            canon: data.canonical_face_url ? `${data.canonical_face_url}?t=${Date.now()}` : (data.cropped_face_url ? `${data.cropped_face_url}?t=${Date.now()}` : "")
+          };
+
+          setStepState(1, "done", "LOCKED");
+          const scoreVal = data.face.score || data.face.det_score || 0.98;
+          inputFaceMeta.textContent = `Score: ${(scoreVal * 100).toFixed(0)}%`;
+
+          // 3D Head Pose
+          if (data.face.pose && data.face.pose.length === 3) {
+            const [p, y, r] = data.face.pose;
+            hudPoseVal.textContent = `P: ${p > 0 ? "+" : ""}${p.toFixed(1)}° | Y: ${y > 0 ? "+" : ""}${y.toFixed(1)}° | R: ${r > 0 ? "+" : ""}${r.toFixed(1)}°`;
+          } else {
+            hudPoseVal.textContent = "Normalized 0.0°";
+          }
+
+          // Demographics & Det Score
+          const ageStr = data.face.age ? `~${data.face.age} yrs` : "Estimated";
+          const genderStr = data.face.gender === 1 ? "Male" : (data.face.gender === 0 ? "Female" : "Human");
+          hudDemographics.textContent = `${ageStr} / ${genderStr}`;
+          hudDetScore.textContent = `${((data.face.det_score || 0.98) * 100).toFixed(1)}%`;
+
+          // OCR text cues
+          const keywords = data.face.ocr_keywords || [];
+          if (keywords.length > 0) {
+            hudOcrKeywords.innerHTML = keywords.map(kw => `
+              <span class="px-2 py-0.5 rounded bg-signalGreen/10 border border-signalGreen/40 text-signalGreen font-bold font-mono text-[11px] inline-flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-signalGreen"></span>
+                ${kw}
+              </span>
+            `).join("");
+          } else {
+            hudOcrKeywords.innerHTML = `<span class="text-textMuted italic text-[10px]">No banner text detected.</span>`;
+          }
+
+          setPerspectiveView("hud");
+          appendLog(`[BIOMETRICS] New face detected: 68 3D landmarks + 106 2D fiducials locked (Score: ${(scoreVal * 100).toFixed(1)}%, Age: ${ageStr}, Gender: ${genderStr}).`, "text-signalGreen font-bold");
+          if (keywords.length > 0) {
+            appendLog(`[OCR] Extracted banner keywords: ${keywords.join(", ")}`, "text-signalGreen");
+          }
+        } else {
+          setStepState(1, "failed", "NO FACE");
+          inputFaceMeta.textContent = "No Face";
+          clearLandmarkMesh();
+          appendLog(`[NOTICE] ${data.error || "No face detected in the newly uploaded image."}`, "text-signalYellow");
+        }
+      } catch (err) {
+        setStepState(1, "failed", "ERROR");
+        console.error("Instant face detection error:", err);
+      }
+    }
+
+    function handleFileSelect(file) {
+      if (!file) return;
+      resetScanResults(); // Erase all previous facial, candidate, and proof data!
+
+      originalImageFile = file;
+      selectedImageFile = file;
+      isManuallyCropped = false;
+      selectedSampleId = null;
+
+      const uploadFileName = document.getElementById("uploadFileName");
+      const uploadFileSize = document.getElementById("uploadFileSize");
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        originalImageDataUrl = e.target.result;
+        imgPreview.src = e.target.result;
+        if (uploadFileName) uploadFileName.textContent = file.name;
+        if (uploadFileSize) uploadFileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+        dropzoneEmpty.classList.add("hidden");
+        dropzonePreview.classList.remove("hidden");
+        if (btnClearImage) btnClearImage.classList.remove("hidden");
+        if (btnRevertCrop) btnRevertCrop.classList.add("hidden");
+        imgSourceDisplay.src = e.target.result;
+        imgSourceDisplay.classList.remove("hidden");
+        imgSourcePlaceholder.classList.add("hidden");
+        appendLog(`[INPUT] Uploaded new scan: ${file.name} (${(file.size / 1024).toFixed(1)} KB) — Initializing real-time biometric scan...`);
+
+        // Immediately run instant face detection & 68 landmark extraction on the newly uploaded image!
+        triggerInstantFaceDetection(file, false);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function resetAllUI() {
+      resetScanResults();
+
+      selectedImageFile = null;
+      originalImageFile = null;
+      originalImageDataUrl = null;
+      isManuallyCropped = false;
+      selectedSampleId = null;
+      fileInput.value = "";
+
+      if (cropperInstance) {
+        cropperInstance.destroy();
+        cropperInstance = null;
+      }
+      modalCropImage.classList.add("hidden");
+
+      // Dropzone
+      dropzoneEmpty.classList.remove("hidden");
+      dropzonePreview.classList.add("hidden");
+      if (btnClearImage) btnClearImage.classList.add("hidden");
+      if (btnRevertCrop) btnRevertCrop.classList.add("hidden");
+
+      // Source Image Box
+      imgSourceDisplay.src = "";
+      imgSourceDisplay.classList.add("hidden");
+      imgSourcePlaceholder.classList.remove("hidden");
+      inputFaceMeta.textContent = "--";
+
+      bannerGuide.classList.remove("hidden");
       appendLog("[RESET] System state and comparator displays cleared to initial ready state.");
     }
 
@@ -1568,6 +1986,8 @@
           selectedImageFile = croppedFile;
           isManuallyCropped = true;
 
+          resetScanResults(); // Clear old match & telemetry
+
           const croppedUrl = URL.createObjectURL(blob);
           imgPreview.src = croppedUrl;
           imgSourceDisplay.src = croppedUrl;
@@ -1581,7 +2001,10 @@
           if (btnRevertCrop) btnRevertCrop.classList.remove("hidden");
 
           modalCropImage.classList.add("hidden");
-          appendLog(`[CROP] Framed manual face crop: ${canvas.width}×${canvas.height}px (${(blob.size / 1024).toFixed(1)} KB)`, "text-signalGreen font-bold");
+          appendLog(`[CROP] Framed manual face crop: ${canvas.width}×${canvas.height}px (${(blob.size / 1024).toFixed(1)} KB) — Scanning biometrics...`, "text-signalGreen font-bold");
+
+          // Trigger instant face detection on cropped region
+          triggerInstantFaceDetection(croppedFile, true);
         }, "image/jpeg", 0.95);
       });
     }
@@ -1592,6 +2015,8 @@
         if (!originalImageFile || !originalImageDataUrl) return;
         selectedImageFile = originalImageFile;
         isManuallyCropped = false;
+        resetScanResults();
+
         imgPreview.src = originalImageDataUrl;
         imgSourceDisplay.src = originalImageDataUrl;
 
@@ -1600,7 +2025,9 @@
         if (uploadFileName) uploadFileName.textContent = originalImageFile.name;
         if (uploadFileSize) uploadFileSize.textContent = `${(originalImageFile.size / 1024).toFixed(1)} KB`;
         btnRevertCrop.classList.add("hidden");
-        appendLog("[CROP] Reverted to full original uncropped image.", "text-textSecondary");
+        appendLog("[CROP] Reverted to full original uncropped image — Re-scanning biometrics...", "text-textSecondary");
+
+        triggerInstantFaceDetection(originalImageFile, false);
       });
     }
 
@@ -1701,21 +2128,74 @@
           return;
         }
 
-        // Face Metadata & Cropped Face View
+        // Update Biometric Telemetry & Perspective Probes
         if (data.face) {
           setStepState(1, "done", "COMPLETED");
           const scoreVal = data.face.score || data.face.det_score || 0.88;
           inputFaceMeta.textContent = `Score: ${(scoreVal * 100).toFixed(0)}%`;
+          currentFaceData = data.face;
+
+          // 3D Head Pose
+          if (data.face.pose && data.face.pose.length === 3) {
+            const [p, y, r] = data.face.pose;
+            hudPoseVal.textContent = `P: ${p > 0 ? "+" : ""}${p.toFixed(1)}° | Y: ${y > 0 ? "+" : ""}${y.toFixed(1)}° | R: ${r > 0 ? "+" : ""}${r.toFixed(1)}°`;
+          } else {
+            hudPoseVal.textContent = "Normalized 0.0°";
+          }
+
+          // Demographics & Quality
+          const ageStr = data.face.age ? `~${data.face.age} yrs` : "Estimated";
+          const genderStr = data.face.gender === 1 ? "Male" : (data.face.gender === 0 ? "Female" : "Human");
+          hudDemographics.textContent = `${ageStr} / ${genderStr}`;
+          hudDetScore.textContent = `${((data.face.det_score || 0.98) * 100).toFixed(1)}%`;
+
+          // Multi-Modal OCR Identity Keywords
+          const keywords = data.face.ocr_keywords || [];
+          if (keywords.length > 0) {
+            hudOcrKeywords.innerHTML = keywords.map(kw => `
+              <span class="px-2 py-0.5 rounded bg-signalGreen/10 border border-signalGreen/40 text-signalGreen font-bold font-mono text-[11px] inline-flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-signalGreen"></span>
+                ${kw}
+              </span>
+            `).join("");
+          } else {
+            hudOcrKeywords.innerHTML = `<span class="text-textMuted italic text-[10px]">No banner text detected on card.</span>`;
+          }
         }
 
-        if (data.cropped_face_url && !isManuallyCropped) {
-          imgSourceDisplay.src = `${data.cropped_face_url}?t=${Date.now()}`;
-          imgSourceDisplay.classList.remove("hidden");
-          imgSourcePlaceholder.classList.add("hidden");
-        }
+        probeUrls = {
+          full: data.input_image_url ? `${data.input_image_url}?t=${Date.now()}` : "",
+          crop: data.cropped_face_url ? `${data.cropped_face_url}?t=${Date.now()}` : "",
+          canon: data.canonical_face_url ? `${data.canonical_face_url}?t=${Date.now()}` : (data.cropped_face_url ? `${data.cropped_face_url}?t=${Date.now()}` : "")
+        };
+
+        imgSourceDisplay.classList.remove("hidden");
+        imgSourcePlaceholder.classList.add("hidden");
+        setPerspectiveView("hud");
 
         // Render Candidates Table with Pictures
         renderCandidates(data.candidates || []);
+
+        // Render Multi-Hop Evidence Trail (Agentic Mode)
+        if (data.evidence_chain && data.evidence_chain.length > 0) {
+          cardEvidenceTrail.classList.remove("hidden");
+          evidenceNodeCount.textContent = `${data.evidence_chain.length} EVIDENCE STEPS`;
+          evidenceChainList.innerHTML = data.evidence_chain.map((step, idx) => `
+            <div class="flex items-start gap-2.5 p-2 rounded bg-surface border border-border">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold font-mono ${idx === data.evidence_chain.length ? 'bg-signalGreen text-bg font-bold' : 'bg-surfaceElevated text-signalGreen border border-border'}">${idx}</span>
+              <div class="flex flex-col gap-0.5 flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-surfaceElevated text-textSecondary font-semibold">${step.type}</span>
+                  <span class="text-xs font-bold text-textPrimary truncate">${step.label}</span>
+                </div>
+                ${step.metadata && step.metadata.url ? `<a href="${step.metadata.url}" target="_blank" class="text-[11px] font-mono text-signalGreen hover:underline truncate block">${step.metadata.url}</a>` : ''}
+              </div>
+            </div>
+          `).join('');
+        } else {
+          cardEvidenceTrail.classList.add("hidden");
+        }
+
 
         if (!data.matched) {
           setStepState(2, "failed", "NO MATCH");
@@ -1858,13 +2338,18 @@
           ? `<img src="${candImgSrc}" alt="Candidate ${idx+1}" class="w-20 h-20 rounded-md border border-border object-cover bg-bg shrink-0" onerror="this.style.display='none'" />`
           : `<div class="w-20 h-20 rounded-md border border-border bg-bg flex items-center justify-center text-[11px] text-textMuted font-mono shrink-0">NO IMAGE</div>`;
 
+        const platformName = (cand.platform || "WEB").toUpperCase();
+        const platformBadge = (platformName === "X" || platformName === "TWITTER")
+          ? `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/80 border border-white/30 text-white font-bold inline-block">𝕏 / X</span>`
+          : `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface border border-border text-textPrimary uppercase font-bold inline-block">${platformName}</span>`;
+
         // 1. Append Table Row
         const tr = document.createElement("tr");
         tr.className = "border-b border-border hover:bg-surfaceElevated transition-colors cursor-pointer group";
         tr.innerHTML = `
           <td class="py-2.5 px-4 text-textMuted font-bold">#${cand.position || (idx + 1)}</td>
           <td class="py-2.5 px-4">${photoHtmlTable}</td>
-          <td class="py-2.5 px-4 font-bold text-textPrimary uppercase">${cand.platform || "WEB"}</td>
+          <td class="py-2.5 px-4 font-bold">${platformBadge}</td>
           <td class="py-2.5 px-4 text-textPrimary max-w-xs">
             <p class="text-xs font-bold text-textPrimary truncate" title="${cand.title || cand.url}">${cand.title || "Social Post"}</p>
             <a href="${cand.url}" target="_blank" class="hover:text-signalGreen hover:underline truncate block text-[11px] text-textMuted" title="${cand.url}" onclick="event.stopPropagation()">
@@ -1889,15 +2374,17 @@
         let sourceBadge = "";
         if (cand.verification_source === "page_image") {
           sourceBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalGreen/10 border border-signalGreen/60 text-signalGreen font-semibold">PAGE IMAGE</span>`;
-        } else if (cand.verification_source === "lens_thumbnail_fallback") {
-          sourceBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalYellow/10 border border-signalYellow/60 text-signalYellow font-semibold">THUMBNAIL FALLBACK</span>`;
+        } else if (cand.verification_source === "thumbnail_fallback" || cand.verification_source === "lens_thumbnail_fallback") {
+          sourceBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalYellow/10 border border-signalYellow/60 text-signalYellow font-semibold">THUMBNAIL</span>`;
         }
 
         let dupBadge = "";
-        if (cand.near_duplicate_of_input === true) {
-          dupBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalYellow/10 border border-signalYellow/60 text-signalYellow">MIRRORED PHOTO</span>`;
+        if (cand.is_duplicate_candidate === true && cand.duplicate_of) {
+          dupBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalYellow/10 border border-signalYellow/60 text-signalYellow font-medium">DUPLICATE OF #${cand.duplicate_of}</span>`;
+        } else if (cand.near_duplicate_of_input === true) {
+          dupBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalYellow/10 border border-signalYellow/60 text-signalYellow">MIRRORED QUERY</span>`;
         } else if (cand.near_duplicate_of_input === false) {
-          dupBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalGreen/10 border border-signalGreen/60 text-signalGreen">DISTINCT PHOTO</span>`;
+          dupBadge = `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-signalGreen/10 border border-signalGreen/60 text-signalGreen">UNIQUE PHOTO</span>`;
         }
 
         const card = document.createElement("div");
@@ -1908,7 +2395,7 @@
             <div class="flex flex-col gap-1.5 flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-xs font-bold font-mono text-textMuted">#${cand.position || (idx + 1)}</span>
-                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-surface border border-border text-textPrimary uppercase font-bold">${cand.platform || "WEB"}</span>
+                ${platformBadge}
                 ${sourceBadge}
                 ${dupBadge}
                 <span class="text-xs font-bold text-textPrimary truncate max-w-sm">${cand.title || "Social Media Post"}</span>

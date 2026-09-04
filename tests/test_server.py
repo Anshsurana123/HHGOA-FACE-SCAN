@@ -91,3 +91,26 @@ def test_api_verify_and_tamper(client):
     t_data = t_resp.json()
     assert t_data["tamper_detected"] is True
     assert t_data["original_hash"] != t_data["tampered_hash"]
+
+
+def test_api_run_agent_offline(client):
+    """Validates FastAPI /api/run with engine='agent' in offline mode."""
+    response = client.post(
+        "/api/run",
+        data={
+            "sample_id": "scan1.jpg",
+            "network": "local",
+            "tolerance": "0.35",
+            "engine": "agent",
+            "offline_demo": "true",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["matched"] is True
+    assert "evidence_chain" in data
+    assert len(data["evidence_chain"]) >= 1
+    assert "evidence_graph" in data
+    assert data["evidence_graph"] is not None
+

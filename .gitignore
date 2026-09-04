@@ -23,3 +23,8 @@ htmlcov/
 *.egg-info/
 dist/
 build/
+
+# Graphify
+graphify-out/
+.agents/
+

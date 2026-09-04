@@ -85,3 +85,38 @@ def test_cli_run_verify_tamper_offline_flow():
         assert tamper_res.exit_code == 0, f"Tamper output: {tamper_res.output}"
         assert "TAMPERING DETECTED" in tamper_res.output
         assert "DEMO SUCCESS" in tamper_res.output
+
+
+def test_cli_run_agent_engine_offline_flow():
+    """Validates CLI run execution using --engine agent."""
+    runner = CliRunner()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_dir = os.path.join(tmpdir, "out")
+        chain_file = os.path.join(tmpdir, "test_local_chain.json")
+        image_path = "tests/fixtures/person1_a.jpg"
+
+        run_res = runner.invoke(
+            cli,
+            [
+                "run",
+                "--image", image_path,
+                "--engine", "agent",
+                "--network", "local",
+                "--offline-demo",
+                "--out-dir", out_dir,
+            ],
+            env={"LOCAL_CHAIN_FILE": chain_file},
+        )
+        assert run_res.exit_code == 0, f"Run output: {run_res.output}"
+        assert "STAGE 1: Face Identification" in run_res.output
+        assert "STAGE 2: Genuine Social Media Search" in run_res.output
+        assert "STAGE 3: Blockchain Anchoring" in run_res.output
+        assert "Anchored on Local Simulated Blockchain" in run_res.output
+
+        record_path = os.path.join(out_dir, "record.json")
+        assert os.path.exists(record_path)
+        with open(record_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        assert "research" in data
+        assert "evidence_chain" in data["research"]
+

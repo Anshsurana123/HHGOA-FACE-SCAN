@@ -24,14 +24,15 @@ HH-FaceChain provides cryptographic provenance and verification for digital medi
                                            |
                                            v
  +-------------------------------------------------------------------------------------+
- | STAGE 2: Genuine Social Media Search & Re-Verification                              |
- | 1. Upload scan to ImgBB REST API -> Public reachable URL                            |
- | 2. Query SerpApi Google Lens engine (engine=google_lens)                            |
- | 3. Filter candidates to social domains (x.com, instagram.com, reddit.com, etc.)     |
- | 4. Extract post metadata (oEmbed / OpenGraph HTML via BeautifulSoup)                |
- | 5. Download candidate post image & re-verify face match:                            |
- |    Cosine Distance = 1.0 - (u . v) / (||u|| ||v||) < 0.35 (Configurable)            |
+ | STAGE 2: Multi-Hop OSINT Discovery & Deterministic Verification                     |
+ | Mode A (Classic Reverse): Google Lens / Yandex Dual-Perspective matching            |
+ | Mode B (Agentic OSINT - NEW): Autonomous LLM-driven research loop:                 |
+ |   * 12 specialized OSINT tools (OCR, query generation, web/social search, scraping)  |
+ |   * Solves DIFFERENT-photo matches (lanyards, badges, events, attendee galleries)   |
+ |   * Builds a cryptographic Directed Acyclic Graph (DAG) of evidence provenance      |
+ |   * Strict Biometric Gatekeeper: InsightFace cosine distance < 0.35 threshold       |
  +-------------------------------------------------------------------------------------+
+
                                            |
                                            v
  +-------------------------------------------------------------------------------------+
@@ -58,25 +59,41 @@ hh-facechain/
 ├── faceid/
 │   ├── __init__.py
 │   └── encoder.py            # InsightFace buffalo_l wrapper, embeddings & cosine distance
+├── agent/                    # Autonomous Multi-Hop OSINT Discovery Agent
+│   ├── __init__.py
+│   ├── state.py              # EvidenceNode, EvidenceEdge, EvidenceGraph, ResearchState
+│   ├── schemas.py            # 12-tool schema for Gemini & OpenAI function declarations
+│   ├── prompts.py            # Strict OSINT researcher system instructions
+│   ├── tools.py              # Deterministic tool implementations & dispatch table
+│   ├── llm_client.py         # Multi-provider LLM interface (Gemini, OpenAI, Heuristic)
+│   └── researcher.py         # ResearchAgent orchestrator loop & candidate ranking
 ├── search/
 │   ├── __init__.py
 │   ├── imgbb_client.py       # ImgBB REST API client with retry & rate limiting
-│   ├── lens_client.py        # SerpApi Google Lens client
+│   ├── lens_client.py        # SerpApi Google Lens client & Google Web Search
+│   ├── yandex_client.py      # SerpApi Yandex Images client
+│   ├── ocr_extractor.py      # EasyOCR image text & keyword extractor
 │   ├── post_extractor.py     # Shared oEmbed & OpenGraph metadata extractor
-│   └── matcher.py            # Search orchestration, candidate filtering & re-match
+│   └── matcher.py            # Dual-perspective reverse search & candidate filtering
 ├── chain/
 │   ├── __init__.py
 │   ├── anchor.py             # Canonical JSON record builder and SHA-256 hasher
 │   ├── local_chain.py        # Simulated PoW blockchain with JSON persistence
 │   └── web3_client.py        # Web3.py client for Polygon Amoy contract interaction
+├── server.py                 # FastAPI server with real-time HUD and agent telemetry
+├── ui/
+│   └── index.html            # Lab-instrument presentation console with Cropper.js & Evidence Trail HUD
 ├── scripts/
 │   └── deploy.py             # Solc compiler & deployment script for Polygon Amoy
 ├── tests/
 │   ├── fixtures/             # Test face images and negative controls
+│   ├── test_agent.py         # Multi-hop OSINT agent & evidence graph unit tests (13 tests)
+│   ├── test_biometrics_and_ocr.py # EasyOCR & face crop tests
 │   ├── test_faceid.py        # Stage 1 unit tests
 │   ├── test_search.py        # Stage 2 unit tests
 │   ├── test_chain.py         # Stage 3 unit tests
-│   └── test_cli.py           # Integration CLI tests
+│   ├── test_server.py        # FastAPI endpoints & UI tests
+│   └── test_cli.py           # Integration CLI tests (including --engine agent)
 ├── demo/
 │   ├── scan1.jpg             # Public figure 1 scan (Barack Obama)
 │   └── scan2.jpg             # Public figure 2 scan (Joe Biden)
@@ -84,6 +101,7 @@ hh-facechain/
 ├── requirements.txt          # Pinned project dependencies
 ├── .env.example              # Environment variables template
 └── README.md                 # Complete documentation and verification records
+
 ```
 
 ---
@@ -126,10 +144,19 @@ hh-facechain/
    ```
    Populate the following variables:
    ```ini
+   # LLM Provider for Autonomous OSINT Agent (Gemini recommended)
+   GEMINI_API_KEY=your_gemini_api_key_here
+   # Alternative: OPENAI_API_KEY=your_openai_api_key_here
+
+   # Search & Provisioning APIs
    SERPAPI_KEY=your_serpapi_key_here
    IMGBB_KEY=your_imgbb_key_here
+
+   # Blockchain (Polygon Amoy Testnet)
    PRIVATE_KEY=your_polygon_amoy_private_key_here
    RPC_URL=https://polygon-amoy-bor-rpc.publicnode.com
+
+   # Biometric verification threshold
    FACE_MATCH_TOL=0.35
    ```
 
@@ -147,6 +174,8 @@ python server.py
 Then open your browser to **[http://localhost:8000](http://localhost:8000)**.
 
 **Features of the Presentation UI:**
+- **4-Way Search Engine Switcher**: Toggle effortlessly between **Google Lens**, **Yandex Images**, **Hybrid Mode**, and **Autonomous Agentic OSINT Mode**.
+- **Interactive Multi-Hop OSINT Evidence Trail**: Live visualization of the investigative Directed Acyclic Graph (DAG), showing every clue, search query, visited URL, harvested candidate image, and biometric gatekeeper evaluation.
 - **Drag-and-Drop Dropzone & Presets**: Upload any face scan image or click one of the preset public figure buttons (`Barack Obama`, `Joe Biden`).
 - **Interactive Dual Blockchain Toggle**: Switch seamlessly between **Local Simulated PoW Chain** and **Polygon Amoy Testnet**.
 - **Real-Time Tolerance Slider**: Adjust cosine distance matching tolerance (`0.05` strict to `0.95` loose).
@@ -227,13 +256,36 @@ python main.py run --image demo/scan1.jpg --network local
 
 ---
 
+#### Autonomous Multi-Hop OSINT Agent Mode (`--engine agent`)
+
+When the subject in the input photo appears in social media with **different clothes, different lighting, different angle, or lower resolution**, standard reverse search engines (Lens / Yandex) fail to surface the post directly. Use `--engine agent` to engage the autonomous OSINT discovery agent:
+
+```bash
+# Autonomous Multi-Hop OSINT Investigation (Local PoW Chain)
+python main.py run --image path/to/unseen_photo.jpg --engine agent --network local
+
+# Fast Offline Demonstration Mode (Validates multi-hop pipeline offline)
+python main.py run --image demo/scan1.jpg --engine agent --offline-demo --network local
+```
+
+The agent executes a multi-step investigation loop:
+1. Extracts OCR text and visual clues (conference badges, lanyards, event logos, signage).
+2. Generates high-entropy investigative web and social search queries.
+3. Visits discovered pages, events, or galleries and harvests candidate image collections.
+4. Passes each candidate image through the **InsightFace deterministic biometric gatekeeper**.
+5. Ranks candidates via multi-factor scoring (Face biometrics 60%, source quality 25%, image resolution 15%).
+6. Formulates the canonical post record, extracts SHA-256 fingerprint, and anchors on-chain with full evidence DAG provenance.
+
+---
+
 ### Command 2: Face Search Mode (`search`)
 
 Runs Stages 1 & 2 only, listing all candidate evaluations and distances without blockchain anchoring:
 
 ```bash
-python main.py search --image demo/scan1.jpg
+python main.py search --image demo/scan1.jpg --engine agent
 ```
+
 
 #### Real Sample Output:
 ```
@@ -470,28 +522,20 @@ pytest -v
 ============================= test session starts =============================
 platform win32 -- Python 3.13.7, pytest-9.1.1, pluggy-1.6.0
 rootdir: C:\Users\ANSH\.gemini\antigravity\scratch\HHGOATASK3FACE
-collected 17 items
+plugins: anyio-4.14.2
+collected 48 items
 
-tests/test_chain.py::test_canonical_record_determinism PASSED            [  5%]
-tests/test_chain.py::test_hash_to_bytes32 PASSED                         [ 11%]
-tests/test_chain.py::test_local_blockchain_pow_and_verification PASSED   [ 17%]
-tests/test_chain.py::test_local_blockchain_tamper_detection PASSED       [ 23%]
-tests/test_cli.py::test_cli_help PASSED                                  [ 29%]
-tests/test_cli.py::test_cli_chain_status_local PASSED                    [ 35%]
-tests/test_cli.py::test_cli_run_verify_tamper_offline_flow PASSED        [ 41%]
-tests/test_faceid.py::test_cosine_distance_properties PASSED             [ 47%]
-tests/test_faceid.py::test_same_person_matches PASSED                    [ 52%]
-tests/test_faceid.py::test_different_people_do_not_match PASSED          [ 58%]
-tests/test_faceid.py::test_no_face_found_raises_exception PASSED         [ 64%]
-tests/test_faceid.py::test_invalid_image_raises_error PASSED             [ 70%]
-tests/test_faceid.py::test_encode_face_with_meta PASSED                  [ 76%]
-tests/test_search.py::test_social_platform_domain_filtering PASSED       [ 82%]
-tests/test_search.py::test_url_normalization PASSED                      [ 88%]
-tests/test_search.py::test_opengraph_extraction_parser PASSED            [ 94%]
-tests/test_search.py::test_offline_demo_matcher PASSED                   [100%]
+tests/test_agent.py .............                                        [ 27%]
+tests/test_biometrics_and_ocr.py ...                                     [ 33%]
+tests/test_chain.py .....                                                [ 43%]
+tests/test_cli.py ....                                                   [ 52%]
+tests/test_faceid.py ........                                            [ 68%]
+tests/test_search.py ........                                            [ 85%]
+tests/test_server.py .......                                             [100%]
 
-======================= 17 passed, 4 warnings in 7.56s ========================
+====================== 48 passed, 21 warnings in 56.26s =======================
 ```
+
 
 ---
 

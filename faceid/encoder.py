@@ -66,7 +66,14 @@ class FaceEncoder:
             nparr = np.frombuffer(image_input, np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if img is None:
-                raise ImageReadError("Failed to decode image from raw bytes.")
+                # Fallback to PIL in case of exotic image container (e.g. WebP / AVIF / indexed PNG)
+                try:
+                    import io
+                    from PIL import Image
+                    pil_img = Image.open(io.BytesIO(image_input)).convert("RGB")
+                    img = np.array(pil_img)[:, :, ::-1].copy()
+                except Exception:
+                    raise ImageReadError("Failed to decode image from raw bytes.")
             return img
 
         if isinstance(image_input, str):
@@ -115,6 +122,10 @@ class FaceEncoder:
             "det_score": float(largest_face.det_score) if hasattr(largest_face, "det_score") else None,
             "gender": int(largest_face.gender) if hasattr(largest_face, "gender") and largest_face.gender is not None else None,
             "age": int(largest_face.age) if hasattr(largest_face, "age") and largest_face.age is not None else None,
+            "kps": [[float(p[0]), float(p[1])] for p in largest_face.kps] if hasattr(largest_face, "kps") and largest_face.kps is not None else [],
+            "landmark_3d_68": [[float(p[0]), float(p[1]), float(p[2])] for p in largest_face.landmark_3d_68] if hasattr(largest_face, "landmark_3d_68") and largest_face.landmark_3d_68 is not None else [],
+            "landmark_2d_106": [[float(p[0]), float(p[1])] for p in largest_face.landmark_2d_106] if hasattr(largest_face, "landmark_2d_106") and largest_face.landmark_2d_106 is not None else [],
+            "pose": [float(a) for a in largest_face.pose] if hasattr(largest_face, "pose") and largest_face.pose is not None else [],
             "total_faces_detected": len(faces),
         }
 
@@ -143,6 +154,10 @@ class FaceEncoder:
                 "det_score": float(face.det_score) if hasattr(face, "det_score") else None,
                 "gender": int(face.gender) if hasattr(face, "gender") and face.gender is not None else None,
                 "age": int(face.age) if hasattr(face, "age") and face.age is not None else None,
+                "kps": [[float(p[0]), float(p[1])] for p in face.kps] if hasattr(face, "kps") and face.kps is not None else [],
+                "landmark_3d_68": [[float(p[0]), float(p[1]), float(p[2])] for p in face.landmark_3d_68] if hasattr(face, "landmark_3d_68") and face.landmark_3d_68 is not None else [],
+                "landmark_2d_106": [[float(p[0]), float(p[1])] for p in face.landmark_2d_106] if hasattr(face, "landmark_2d_106") and face.landmark_2d_106 is not None else [],
+                "pose": [float(a) for a in face.pose] if hasattr(face, "pose") and face.pose is not None else [],
                 "total_faces_detected": len(faces),
             }
             results.append((np.asarray(embedding, dtype=np.float32), meta))
@@ -167,10 +182,68 @@ def encode_face_with_meta(image_input: Union[str, bytes, np.ndarray]) -> tuple[n
 
 
 def encode_all_faces(image_input: Union[str, bytes, np.ndarray]) -> list[np.ndarray]:
-    """Helper function returning list of 512-d embeddings for all detected faces in the image."""
+    """Helper function returning list of 512-d embeddings for all detected faces in the image, or [] if none found."""
+    try:
+        encoder = FaceEncoder.get_instance()
+        pairs = encoder.encode_all_faces(image_input)
+        return [emb for emb, _ in pairs]
+    except (NoFaceFound, ImageReadError, Exception):
+        return []
+
+
+def extract_canonical_aligned_face(
+    image_input: Union[str, bytes, np.ndarray],
+    image_size: int = 224,
+) -> tuple[bytes, np.ndarray, dict]:
+    """
+    Computes a canonical Umeyama affine similarity transform aligning the face landmarks to
+    a standard reference frame (eliminating in-plane head tilt, scale skew, and background clutter).
+    
+    Returns:
+        tuple[bytes, np.ndarray, dict]: (aligned_face_jpeg_bytes, 512-d embedding, metadata)
+    """
+    from insightface.utils import face_align
+
     encoder = FaceEncoder.get_instance()
-    pairs = encoder.encode_all_faces(image_input)
-    return [emb for emb, _ in pairs]
+    img_bgr = encoder.read_image(image_input)
+    faces = encoder.app.get(img_bgr)
+    if not faces:
+        raise NoFaceFound("No face detected in the input image.")
+
+    largest_face = max(
+        faces,
+        key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1])
+    )
+
+    embedding = largest_face.normed_embedding
+    if embedding is None:
+        raw = largest_face.embedding
+        norm = np.linalg.norm(raw)
+        if norm == 0:
+            raise FaceIdentificationError("Zero-norm face embedding generated.")
+        embedding = raw / norm
+
+    aligned_bgr = face_align.norm_crop(img_bgr, landmark=largest_face.kps, image_size=image_size)
+    success, buffer = cv2.imencode(".jpg", aligned_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+    if not success:
+        raise FaceIdentificationError("Failed to encode canonical aligned face to JPEG.")
+    aligned_bytes = buffer.tobytes()
+
+    metadata = {
+        "bbox": [float(c) for c in largest_face.bbox],
+        "det_score": float(largest_face.det_score) if hasattr(largest_face, "det_score") else None,
+        "gender": int(largest_face.gender) if hasattr(largest_face, "gender") and largest_face.gender is not None else None,
+        "age": int(largest_face.age) if hasattr(largest_face, "age") and largest_face.age is not None else None,
+        "kps": [[float(p[0]), float(p[1])] for p in largest_face.kps] if hasattr(largest_face, "kps") and largest_face.kps is not None else [],
+        "landmark_3d_68": [[float(p[0]), float(p[1]), float(p[2])] for p in largest_face.landmark_3d_68] if hasattr(largest_face, "landmark_3d_68") and largest_face.landmark_3d_68 is not None else [],
+        "landmark_2d_106": [[float(p[0]), float(p[1])] for p in largest_face.landmark_2d_106] if hasattr(largest_face, "landmark_2d_106") and largest_face.landmark_2d_106 is not None else [],
+        "pose": [float(a) for a in largest_face.pose] if hasattr(largest_face, "pose") and largest_face.pose is not None else [],
+        "total_faces_detected": len(faces),
+        "alignment": "umeyama_canonical",
+        "aligned_size": image_size,
+    }
+
+    return aligned_bytes, np.asarray(embedding, dtype=np.float32), metadata
 
 
 def extract_face_crop(
@@ -226,6 +299,10 @@ def extract_face_crop(
         "det_score": float(largest_face.det_score) if hasattr(largest_face, "det_score") else None,
         "gender": int(largest_face.gender) if hasattr(largest_face, "gender") and largest_face.gender is not None else None,
         "age": int(largest_face.age) if hasattr(largest_face, "age") and largest_face.age is not None else None,
+        "kps": [[float(p[0]), float(p[1])] for p in largest_face.kps] if hasattr(largest_face, "kps") and largest_face.kps is not None else [],
+        "landmark_3d_68": [[float(p[0]), float(p[1]), float(p[2])] for p in largest_face.landmark_3d_68] if hasattr(largest_face, "landmark_3d_68") and largest_face.landmark_3d_68 is not None else [],
+        "landmark_2d_106": [[float(p[0]), float(p[1])] for p in largest_face.landmark_2d_106] if hasattr(largest_face, "landmark_2d_106") and largest_face.landmark_2d_106 is not None else [],
+        "pose": [float(a) for a in largest_face.pose] if hasattr(largest_face, "pose") and largest_face.pose is not None else [],
         "total_faces_detected": len(faces),
     }
 
